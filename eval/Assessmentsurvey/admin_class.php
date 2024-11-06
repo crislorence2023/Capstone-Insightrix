@@ -370,7 +370,7 @@ private function validatePassword($password) {
 
    function forgot_password() {
     extract($_POST);
-    $type = array("","users","faculty_list","student_list");
+    $type = array("", "users", "faculty_list", "student_list");
     $table = $type[$login];
     
     // Sanitize email input
@@ -378,7 +378,7 @@ private function validatePassword($password) {
     
     $qry = $this->db->query("SELECT * FROM $table WHERE email = '" . $this->db->real_escape_string($email) . "'");
     
-    if($qry->num_rows > 0) {
+    if ($qry->num_rows > 0) {
         $row = $qry->fetch_assoc();
         $verification_code = substr(md5(uniqid(mt_rand(), true)), 0, 6);
         $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
@@ -388,33 +388,31 @@ private function validatePassword($password) {
             verification_code_expiry = '" . $this->db->real_escape_string($expiry) . "' 
             WHERE id = " . (int)$row['id']);
         
-        if($update) {
-            // Using the existing PHPMailer setup
+        if ($update) {
             require 'vendor/autoload.php';
             $mail = new PHPMailer\PHPMailer\PHPMailer(true);
             
             try {
                 // Server settings
                 $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
+                $mail->Host = 'smtp.hostinger.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'Renrenpasilang@gmail.com';
-                $mail->Password = 'jhmfczemtchqlnil';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port = 587;
+                $mail->Username = 'admin@insightrix-ctu.website';
+                $mail->Password = 'Css@12345!';
+                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
+                $mail->Port = 465;
                 
-                // Clear any previous recipients
                 $mail->clearAddresses();
                 
                 // Recipients
-                $mail->setFrom('Renrenpasilang@gmail.com', 'Insightrix Support');
+                $mail->setFrom('admin@insightrix-ctu.website', 'Insightrix Support');
                 $mail->addAddress($email);
                 
                 // Content
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Verification Code';
                 
-                // Create a more professional email template
+                // Professional email template
                 $emailBody = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                     <h2 style='color: #12686e;'>Password Reset Request</h2>
@@ -432,7 +430,7 @@ private function validatePassword($password) {
                 $mail->Body = $emailBody;
                 $mail->AltBody = "Your verification code is: {$verification_code}\nThis code will expire in 1 hour.";
                 
-                if($mail->send()) {
+                if ($mail->send()) {
                     return 1; // Success
                 } else {
                     error_log("Mailer Error: " . $mail->ErrorInfo);
@@ -450,6 +448,7 @@ private function validatePassword($password) {
         return 2; // Email not found
     }
 }
+
 	
 	
 
