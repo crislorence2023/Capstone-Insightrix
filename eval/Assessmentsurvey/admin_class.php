@@ -577,13 +577,13 @@ private function send_verification_email($email, $verification_code) {
 
     try {
         // Server settings
-        $mail->isSMTP();
-        $mail->Host = 'smtp.hostinger.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = 'admin@insightrix-ctu.website';  // Your full email address
-        $mail->Password = 'Css@12345!';  // Your email password
-        $mail->SMTPSecure = 'ssl';  // Changed from PHPMailer::ENCRYPTION_SMTPS to 'ssl'
-        $mail->Port = 465;
+		$mail->isSMTP();
+		$mail->Host = 'smtp.hostinger.com';
+		$mail->SMTPAuth = true;
+		$mail->Username = 'admin@insightrix-ctu.website';
+		$mail->Password = 'Css@12345!';
+		$mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
+		$mail->Port = 465;
         
         // Debug mode - comment out in production
         // $mail->SMTPDebug = SMTP::DEBUG_SERVER;
