@@ -372,26 +372,26 @@ private function validatePassword($password) {
     extract($_POST);
     $type = array("", "users", "faculty_list", "student_list");
     $table = $type[$login];
-    
+
     // Sanitize email input
     $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-    
+
     $qry = $this->db->query("SELECT * FROM $table WHERE email = '" . $this->db->real_escape_string($email) . "'");
-    
+
     if ($qry->num_rows > 0) {
         $row = $qry->fetch_assoc();
         $verification_code = substr(md5(uniqid(mt_rand(), true)), 0, 6);
         $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
-        
+
         $update = $this->db->query("UPDATE $table SET 
             verification_code = '" . $this->db->real_escape_string($verification_code) . "', 
             verification_code_expiry = '" . $this->db->real_escape_string($expiry) . "' 
             WHERE id = " . (int)$row['id']);
-        
+
         if ($update) {
             require 'vendor/autoload.php';
             $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-            
+
             try {
                 // Server settings
                 $mail->isSMTP();
@@ -399,26 +399,27 @@ private function validatePassword($password) {
                 $mail->SMTPAuth = true;
                 $mail->Username = 'admin@insightrix-ctu.website';
                 $mail->Password = 'Css@12345!';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
+                $mail->SMTPSecure = 'ssl';
                 $mail->Port = 465;
-                
-                $mail->clearAddresses();
-                
+
+                // Set charset
+                $mail->CharSet = 'UTF-8';
+
                 // Recipients
                 $mail->setFrom('admin@insightrix-ctu.website', 'Insightrix Support');
                 $mail->addAddress($email);
-                
+
                 // Content
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Verification Code';
-                
+
                 // Professional email template
                 $emailBody = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                     <h2 style='color: #12686e;'>Password Reset Request</h2>
                     <p>You have requested to reset your password. Please use the following verification code:</p>
                     <div style='background-color: #f4f4f4; padding: 15px; text-align: center; margin: 20px 0;'>
-                        <h1 style='color: #12686e; letter-spacing: 5px; margin: 0;'>{$verification_code}</h1>
+                        <h1 style='color: #12686e; letter-spacing: 5px; margin: 0;'>" . htmlspecialchars($verification_code) . "</h1>
                     </div>
                     <p>This code will expire in 1 hour.</p>
                     <p>If you didn't request this password reset, please ignore this email or contact support if you have concerns.</p>
@@ -426,17 +427,16 @@ private function validatePassword($password) {
                         This is an automated message, please do not reply to this email.
                     </p>
                 </div>";
-                
+
                 $mail->Body = $emailBody;
-                $mail->AltBody = "Your verification code is: {$verification_code}\nThis code will expire in 1 hour.";
-                
+                $mail->AltBody = "Your verification code is: " . htmlspecialchars($verification_code) . "\nThis code will expire in 1 hour.";
+
                 if ($mail->send()) {
                     return 1; // Success
                 } else {
                     error_log("Mailer Error: " . $mail->ErrorInfo);
                     return 3; // Email sending failed
                 }
-                
             } catch (Exception $e) {
                 error_log("Mailer Exception: " . $e->getMessage());
                 return 3; // Email sending failed
