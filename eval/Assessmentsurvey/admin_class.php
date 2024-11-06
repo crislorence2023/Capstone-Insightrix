@@ -569,41 +569,68 @@ public function forgot_update_password() {
 	
 
 
-	private function send_verification_email($email, $verification_code) {
-		require 'vendor/autoload.php'; // Ensure PHPMailer is installed via Composer
-	
-		$mail = new PHPMailer\PHPMailer\PHPMailer(true);
-		try {
-			// Server settings
-			$mail->isSMTP();
-                $mail->Host = 'smtp.hostinger.com';
-                $mail->SMTPAuth = true;
-                $mail->Username = 'admin@insightrix-ctu.website';
-                $mail->Password = 'Css@12345!';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
-                $mail->Port = 465;
+private function send_verification_email($email, $verification_code) {
+    require 'vendor/autoload.php';
 
-	
-			// Recipients
-			$mail->setFrom('admin@insightrix-ctu.website', 'Your Name');  // Set sender
-			$mail->addAddress($email);  // Add recipient
-	
-			// Content
-			$mail->isHTML(true);
-			$mail->Subject = 'Email Verification';
-			$mail->Body    = "Your verification code is: <b>{$verification_code}</b>";
-	
-			$mail->send();
-			return true;
-		} catch (Exception $e) {
-			error_log("Mailer Error: {$mail->ErrorInfo}");  // Error logging
-			return false;
-		}
-	}
-		
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
-
-
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = 'smtp.hostinger.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'admin@insightrix-ctu.website';  // Your full email address
+        $mail->Password = 'Css@12345!';  // Your email password
+        $mail->SMTPSecure = 'ssl';  // Changed from PHPMailer::ENCRYPTION_SMTPS to 'ssl'
+        $mail->Port = 465;
+        
+        // Debug mode - comment out in production
+        // $mail->SMTPDebug = SMTP::DEBUG_SERVER;
+        
+        // Set charset
+        $mail->CharSet = 'UTF-8';
+        
+        // Recipients
+        $mail->setFrom('admin@insightrix-ctu.website', 'Insightrix CTU');
+        $mail->addAddress($email);
+        
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = 'Email Verification';
+        
+        // More professional HTML email body
+        $mail->Body = '
+            <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2>Email Verification</h2>
+                    <p>Thank you for registering. Please use the following verification code to complete your registration:</p>
+                    <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; text-align: center; font-size: 24px; font-weight: bold;">
+                        ' . htmlspecialchars($verification_code) . '
+                    </div>
+                    <p>If you did not request this verification code, please ignore this email.</p>
+                    <p>Best regards,<br>Insightrix CTU Team</p>
+                </div>
+            </body>
+            </html>';
+        
+        // Plain text alternative
+        $mail->AltBody = "Your verification code is: {$verification_code}";
+        
+        $mail->send();
+        return true;
+        
+    } catch (Exception $e) {
+        // Enhanced error logging
+        error_log(sprintf(
+            "Email sending failed - Date: %s, To: %s, Error: %s",
+            date('Y-m-d H:i:s'),
+            $email,
+            $mail->ErrorInfo
+        ));
+        return false;
+    }
+}
 
 
 
