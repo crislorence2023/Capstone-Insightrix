@@ -1,0 +1,6 @@
+  <!--<li class="nav-item dropdown">
+                    <a href="./index.php?page=criteria_list" class="nav-link nav-criteria_list">
+                        <i class="nav-icon fas fa-tasks"></i>
+                        <p>Evaluation Criteria</p>
+                    </a>
+                </li> -->
