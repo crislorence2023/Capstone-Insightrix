@@ -577,15 +577,16 @@ public function forgot_update_password() {
 		try {
 			// Server settings
 			$mail->isSMTP();
-			$mail->Host       = 'smtp.gmail.com'; // Replace with your SMTP server
-			$mail->SMTPAuth   = true;
-			$mail->Username   = 'Renrenpasilang@gmail.com'; // Replace with your email
-			$mail->Password   = 'jhmfczemtchqlnil'; // Replace with your app password
-			$mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-			$mail->Port       = 587;
+                $mail->Host = 'smtp.hostinger.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'admin@insightrix-ctu.website';
+                $mail->Password = 'Css@12345!';
+                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
+                $mail->Port = 465;
+
 	
 			// Recipients
-			$mail->setFrom('your-email@gmail.com', 'Your Name');  // Set sender
+			$mail->setFrom('admin@insightrix-ctu.website', 'Your Name');  // Set sender
 			$mail->addAddress($email);  // Add recipient
 	
 			// Content
