@@ -321,7 +321,7 @@
 
     <div class="hero">
         <h1>Empowering Education Through Feedback</h1>
-        <p>A streamlined platform for students to provide constructive feedback, helping educators create more effective learning environments.</p>
+        <p>A streamlined platform for students to provide constructive Feedback, helping educators create more effective learning environments.</p>
         <a href="Assessmentsurvey/login.php" class="btn btn-primary">
             <i class="fas fa-rocket"></i>
             Get Started
