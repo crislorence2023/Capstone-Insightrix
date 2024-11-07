@@ -309,8 +309,8 @@
     <nav class="navbar">
         <div class="nav-container">
             <a href="#" class="logo">
-                <i class="fas fa-chart-line"></i>
-                Insightrix(BETA)
+                <i class=""></i>
+                Insightrix 1.0
             </a>
             <a href="Assessmentsurvey/login.php" class="btn btn-primary">
                 <i class="fas fa-sign-in-alt"></i>
