@@ -502,7 +502,7 @@ if($academic_status == 1) {
                                         <textarea name="comment" id="comment" rows="4" class="form-control"></textarea>
                                     </div>
                                     <div class="text-center mt-4">
-                                        <button type="submit" class="btn btn-primary btn-lg">Submit Evaluation</button>
+                                        <button type="submit" class="btn btn-primary btn-lg" disabled>Submit Evaluation</button>
                                     </div>
                                 </form>
                             </div>
