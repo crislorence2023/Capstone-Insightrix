@@ -166,6 +166,64 @@
     border-radius: 1rem;
     margin-left: 0.5rem;
 }
+@media screen and (max-width: 768px) {
+    /* Hide the firstname on mobile */
+    .navbar .ml-2 {
+        display: none;
+    }
+    
+    /* Ensure login-name is visible and properly styled on mobile */
+   
+    
+    /* Adjust navbar spacing for mobile */
+    .navbar-nav {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    /* Adjust user image size for mobile */
+    .user-img {
+        height: 28px;
+        width: 28px;
+    }
+    
+    /* Ensure dropdown menu doesn't get cut off */
+    .navbar .dropdown-menu {
+        position: absolute;
+        right: 0;
+        left: auto;
+        max-width: 280px;
+    }
+    
+    /* Adjust navbar brand spacing */
+    .navbar-brand {
+        font-size: 1rem;
+        padding: 0.5rem 0;
+    }
+    
+    /* Ensure notification dropdown is properly positioned */
+    .notification-dropdown {
+        width: 100%;
+        max-width: 320px;
+        right: -10px;
+    }
+}
+
+/* Additional media query for very small screens */
+@media screen and (max-width: 480px) {
+    .login-name {
+        max-width: 150px;
+        font-size: 12px !important;
+    }
+    
+    .navbar-brand {
+        max-width: 200px;
+    }
+    
+    .notification-dropdown {
+        max-width: 300px;
+    }
+}
 </style>
 
 <!-- Add this line in your header -->
