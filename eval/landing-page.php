@@ -310,7 +310,7 @@
         <div class="nav-container">
             <a href="#" class="logo">
                 <i class=""></i>
-                Insightrix 1.0
+                Insightrix
             </a>
             <a href="Assessmentsurvey/login.php" class="btn btn-primary">
                 <i class="fas fa-sign-in-alt"></i>
