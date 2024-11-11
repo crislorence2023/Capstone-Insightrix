@@ -37,6 +37,7 @@ $login_name = $_SESSION['login_name'];
             --transition: all 0.3s ease;
             --glow-color: rgba(37, 99, 235, 0.2);
             --animate-duration: 20s;
+            --progress-color: #4299e1;  /* Added progress color */
         }
 
         * {
@@ -110,14 +111,19 @@ $login_name = $_SESSION['login_name'];
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
-        .card-header {
+                .card-header {
             display: flex;
             align-items: center;
             gap: 1rem;
             margin-bottom: 1rem;
         }
 
-        .card-icon {
+        .card-icon i {
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+                .card-icon {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -145,6 +151,13 @@ $login_name = $_SESSION['login_name'];
             font-weight: 600;
             color: var(--text-primary);
         }
+        .card-title-progress {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            
+        }
+
 
         .card-content {
             color: var(--text-secondary);
@@ -155,8 +168,9 @@ $login_name = $_SESSION['login_name'];
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             margin-top: 1rem;
+            box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
         }
 
         .status-not-started {
@@ -605,6 +619,37 @@ $login_name = $_SESSION['login_name'];
             0% { background-color: #fef3c7; }
             100% { background-color: var(--card-background); }
         }
+
+        .progress-icon {
+    background: var(--progress-color);  /* Using the progress-color variable you already defined */
+}
+.location {
+    text-align: center;
+    margin: 1.5rem 0;
+    color: var(--text-primary);
+}
+
+.location p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+}
+
+.location i {
+    color: teal;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(5px);
+    }
+}
     </style>
 
     
@@ -640,6 +685,9 @@ $login_name = $_SESSION['login_name'];
                 <div class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
                     <?php echo $astat[$_SESSION['academic']['status']]; ?>
                 </div>
+                <div class="location">
+    <p>Evaluation Progress Below <i class="fas fa-arrow-down"></i></p>
+</div>
             </div>
         </div>
 
@@ -695,9 +743,9 @@ $login_name = $_SESSION['login_name'];
     <div class="card">
         <div class="card-header">
             <div class="card-icon progress-icon">
-                <i class="fas fa-chart-pie"></i>
+            <i class="fas fa-chart-line"></i>
             </div>
-            <h2 class="card-title">Evaluation Progress</h2>
+            <h2 class="card-title-progress">Evaluation Progress</h2>
         </div>
         <div class="card-content">
             <?php
