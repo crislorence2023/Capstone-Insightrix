@@ -74,14 +74,36 @@ if($academic_status == 1) {
             border-radius: 15px;
             
         }
+        .cardtitle {
+           
+            padding: 10px 10px 10px 10px;
+            border-top-right-radius: 15px !important;
+            border-top-left-radius: 15px !important;
+            
+        }
         .card-header {
             padding: 15px;
             margin-bottom: 10px;
-            background-color: white;
+            border-top-left-radius: 10px !important;
+            border-top-right-radius: 10px !important; 
+            overflow: hidden; /* Ensure the background image doesn't spill out */
+            position: relative;
+           
         }
+        
+       
+
+        .card-header .opacity-10 {
+            opacity: 0.1; /* Makes the background image very subtle */
+        }
+
+        .card-header .position-relative {
+            z-index: 1; /* Ensures text stays on top */
+        }
+        
         .list-group-item.active {
             background-color: teal;
-            border-color: #007bff;
+            border-color: #008B8B;
             border-radius: 10px;
         }
         .btn-primary {
@@ -219,13 +241,26 @@ if($academic_status == 1) {
 
 .formheader{
     font-weight: bold;
-    color: teal;
-    font-size: 1.5rem;
+    color: #00CED1;
+    font-size: 2rem;
+    letter-spacing: 1.5px;
+    text-align: center;
+
+ 
+    
+}
+.academic-year{
+    color: #2D2D2D;
+    text-align: center;
 }
 .criteria-title{
     font-weight: bold;
+    font-size: 1rem;
+    
+    
     
 }
+
 
 
 
@@ -320,6 +355,12 @@ if($academic_status == 1) {
 .mobile-faculty-select {
     display: none;
 }
+.teal-header {
+    background-color: #009688; /* Teal color */
+    height: 8px; /* Adjust height to match the thickness of the teal bar */
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
 
 
 
@@ -398,10 +439,17 @@ if($academic_status == 1) {
                                 <p>Please select an evaluation from the list on the left to begin the assessment.</p>
                             </div>
                         <?php else: ?>
-                            <div class="card-header text-black">
-                                <h5 class="formheader">Evaluation Questionnaire</h5>
-                                <small>Academic Year: <?php echo $_SESSION['academic']['year'].' '.(ordinal_suffix($_SESSION['academic']['semester'])). ' Semester' ?></small>
-                            </div>
+                            <div class="cardtitle">
+    <div class="card-header bg-body text-black position-relative background-cover">
+        <div class="position-absolute top-0 end-0 opacity-10">
+            <img src="./logo/ctu-building3.png" alt="Background Logo" />
+        </div>
+        <div class="position-relative">
+            <h4 class="formheader mb-2">Evaluation Questionnaire</h4>
+            <p class="academic-year mb-0"><strong>Academic Year: <?php echo $_SESSION['academic']['year'].' '.(ordinal_suffix($_SESSION['academic']['semester'])). ' Semester' ?></strong></p>
+        </div>
+    </div>
+</div>
                             <div class="card-body">
                                 <div class="rating-legend">Rating Legend:</div>
                                 <div class="rating-details">
@@ -425,6 +473,7 @@ if($academic_status == 1) {
                                     ?>
                                     <div class="criteria-container">
                                         <h6 class="criteria-title mb-4"><?php echo $crow['criteria'] ?></h6>
+                                        <hr style="color: teal;">
                                         <?php 
                                         $questions = $conn->query("SELECT * FROM question_list WHERE criteria_id = {$crow['id']} AND academic_id = {$_SESSION['academic']['id']} ORDER BY ABS(order_by) ASC");
                                         while($row = $questions->fetch_assoc()):
