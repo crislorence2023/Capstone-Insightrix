@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Insightrix - Teacher Assessment System</title>
     <link rel="icon" href="./Assessmentsurvey/logo/Evalucator-nobg2.png" type="image/x-icon">
+    <title>Insightrix - Teacher Assessment System</title>
     <link href="https://fonts.googleapis.com/css2?family=Istok+Web:ital,wght@0,400;0,700;1,400;1,700&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -41,8 +41,8 @@ body {
 }
 
 .nav-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: auto;
+    margin: auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -257,6 +257,7 @@ body {
     background-color: rgba(0, 0, 0, 0.8);
     justify-content: center;
     align-items: center;
+    
 }
 
 .modal-content {
@@ -269,6 +270,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    border-radius: 20px;
 }
 
 .modal-content video {
@@ -515,6 +517,12 @@ footer {
     color: var(--primary-dark);
 }
 
+
+
+@media (max-width: 1500px) {
+    
+}
+
 @media (max-width: 992px) {
     .image-grid-container {
         grid-template-columns: repeat(2, 1fr);
@@ -568,6 +576,61 @@ footer {
 }
 
 @media (max-width: 576px) {
+
+    .hero-top-t {
+    margin-left: 2rem;
+    margin-right: 2rem;
+    display: flex;
+    align-self: center;
+    justify-self: center;
+    align-self: center;
+    text-align: center;
+}
+    .main-hero-text {
+    justify-self: center;
+    align-self: center;
+    text-align: center;
+    
+}
+    .container {
+    display: flex;
+    flex-direction: column;
+    height: 35rem;
+    margin: 0rem .1rem .1rem .1rem;
+   
+}
+.main-hero-text {
+    
+    align-self: center;
+    
+}
+   
+
+.center-website{
+    margin-left: 2rem;
+    margin-right: 2rem;
+    
+    display: flex;
+    flex-direction: row;
+    font-size: 2.5rem;
+    font-weight: bold;
+    justify-content: center;
+    margin-bottom: 2rem;
+    color: teal;
+}
+
+
+    .main-container {
+   
+    height: 200%;
+   
+    
+}
+.main-container video {
+            width: 100%;
+            height: 40rem;
+            object-fit: cover;
+        }
     .image-grid-container {
         grid-template-columns: 1fr;
     }
