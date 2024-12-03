@@ -71,6 +71,19 @@ body {
             align-items: center;
             gap: 0.5rem;
         }
+        .btn-about {
+            text-decoration: none;
+            padding: 0.625rem 1.75rem;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text);
+            
+        }
 
         .btn-primary {
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
@@ -649,10 +662,10 @@ footer {
                 
                 <img src="./Assessmentsurvey/images/Evalucator.png" alt="logo">
             </a>
-            <a href="Assessmentsurvey/login.php" class="btn btn-primary">
-                
-                Login
-            </a>
+            <div class="nav-links">
+                <a href="about_us.php" class="btn-about">About Us</a>
+                <a href="Assessmentsurvey/login.php" class="btn btn-primary">Login</a>
+            </div>
         </div>
     </nav>
     <div class="hero-top-t">
