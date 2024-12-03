@@ -1,148 +1,320 @@
 <?php
 ?>
-<div class="col-lg-12">
-	<div class="card">
-		<div class="card-body">
-			<form action="" id="manage_student">
-				<input type="hidden" name="id" value="<?php echo isset($id) ? $id : '' ?>">
-				<div class="row">
-					<div class="col-md-6 border-right">
-						<div class="form-group">
-							<label for="" class="control-label">School ID</label>
-							<input type="text" name="school_id" class="form-control form-control-sm" required value="<?php echo isset($school_id) ? $school_id : '' ?>">
-						</div>
-						<div class="form-group">
-							<label for="" class="control-label">First Name</label>
-							<input type="text" name="firstname" class="form-control form-control-sm" required value="<?php echo isset($firstname) ? $firstname : '' ?>">
-						</div>
-						<div class="form-group">
-							<label for="" class="control-label">Last Name</label>
-							<input type="text" name="lastname" class="form-control form-control-sm" required value="<?php echo isset($lastname) ? $lastname : '' ?>">
-						</div>
-						<div class="form-group">
-							<label for="" class="control-label">Class</label>
-							<select name="class_id" id="class_id" class="form-control form-control-sm select2" required>
-								<option value=""></option>
-								<?php 
-								$classes = $conn->query("SELECT id, concat(curriculum,' ',level,' - ',section) as class, department FROM class_list");
-								while($row=$classes->fetch_assoc()):
-								?>
-								<option value="<?php echo $row['id'] ?>" data-department="<?php echo $row['department'] ?>" <?php echo isset($class_id) && $class_id == $row['id'] ? "selected" : "" ?>><?php echo $row['class'] ?></option>
-								<?php endwhile; ?>
-							</select>
-						</div>
-						<div class="form-group">
-							<label for="" class="control-label">Department</label>
-							<input type="text" name="department" id="department" class="form-control form-control-sm" readonly value="<?php echo isset($department) ? $department : '' ?>">
-						</div>
-						<div class="form-group">
-							<label for="" class="control-label">Avatar</label>
-							<div class="custom-file">
-		                      <input type="file" class="custom-file-input" id="customFile" name="img" onchange="displayImg(this,$(this))">
-		                      <label class="custom-file-label" for="customFile">Choose file</label>
-		                    </div>
-						</div>
-						<div class="form-group d-flex justify-content-center align-items-center">
-							<img src="<?php echo isset($avatar) ? 'assets/uploads/'.$avatar :'' ?>" alt="Avatar" id="cimg" class="img-fluid img-thumbnail ">
-						</div>
-					</div>
-					<div class="col-md-6">
-					<div class="form-group">
-    <label class="control-label">Email</label>
-    <input type="email" class="form-control form-control-sm" name="email" value="<?php echo isset($email) ? $email : '' ?>">
-    <small id="#msg"></small>
-</div>
-						<div class="form-group">
-							<label class="control-label">Password</label>
-							<input type="password" class="form-control form-control-sm" name="password" <?php echo !isset($id) ? "required":'' ?>>
-							<small><i><?php echo isset($id) ? "Enter a new password only if you want to change it. Leave blank to keep the current password." : "Default password is 'eval2024'. Please change it after first login." ?></i></small>
-						</div>
-						<div class="form-group">
-							<label class="label control-label">Confirm Password</label>
-							<input type="password" class="form-control form-control-sm" name="cpass" <?php echo !isset($id) ? 'required' : '' ?>>
-							<small id="pass_match" data-status=''></small>
-						</div>
-					</div>
-				</div>
-				<hr>
-				<div class="col-lg-12 text-right justify-content-center d-flex">
-					<button class="btn btn-primary mr-2">Save</button>
-					<button class="btn btn-secondary" type="button" onclick="location.href = 'index.php?page=student_list'">Cancel</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
 <style>
-	img#cimg{
-		height: 15vh;
-		width: 15vh;
-		object-fit: cover;
-		border-radius: 100% 100%;
-	}
+*{
+	margin: 0;
+	padding: 0;
+}
+.header{
+	margin-left: 1rem;
+	font-size: 1.5rem;
+}
 </style>
-<script>
-	$('[name="password"],[name="cpass"]').keyup(function(){
-		var pass = $('[name="password"]').val()
-		var cpass = $('[name="cpass"]').val()
-		if(cpass == '' ||pass == ''){
-			$('#pass_match').attr('data-status','')
-		}else{
-			if(cpass == pass){
-				$('#pass_match').attr('data-status','1').html('<i class="text-success">Password Matched.</i>')
-			}else{
-				$('#pass_match').attr('data-status','2').html('<i class="text-danger">Password does not match.</i>')
-			}
-		}
-	})
-	function displayImg(input,_this) {
-	    if (input.files && input.files[0]) {
-	        var reader = new FileReader();
-	        reader.onload = function (e) {
-	        	$('#cimg').attr('src', e.target.result);
-	        }
 
-	        reader.readAsDataURL(input.files[0]);
-	    }
-	}
-	$('#class_id').change(function(){
-		var department = $('#class_id option:selected').data('department');
-		$('#department').val(department);
-	});
-	$('#manage_student').submit(function(e){
-		e.preventDefault()
-		$('input').removeClass("border-danger")
-		start_load()
-		$('#msg').html('')
-		if($('[name="password"]').val() != '' && $('[name="cpass"]').val() != ''){
-			if($('#pass_match').attr('data-status') != 1){
-				if($("[name='password']").val() !=''){
-					$('[name="password"],[name="cpass"]').addClass("border-danger")
-					end_load()
-					return false;
-				}
-			}
-		}
-		$.ajax({
-			url:'ajax.php?action=save_student',
-			data: new FormData($(this)[0]),
-		    cache: false,
-		    contentType: false,
-		    processData: false,
-		    method: 'POST',
-		    type: 'POST',
-			success:function(resp){
-				if(resp == 1){
-					alert_toast('Data successfully saved.',"success");
-					setTimeout(function(){
-						location.replace('index.php?page=student_list')
-					},750)
-				}else if(resp == 2){
-					$('#msg').html("<div class='alert alert-danger'>Email already exist.</div>");
-					$('[name="email"]').addClass("border-danger")
-					end_load()
-				}
-			}
-		})
-	})
+<div class="container py-4 rounded-5">
+    <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-header bg-light bg-gradient text-white py-3">
+            <div class="d-flex align-items-center">
+                <h5 class="mb-0 flex-grow-1 text-bold"><?php echo isset($id) ? 'Edit Student' : 'Add New Student'; ?></h5>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="location.href = 'indexsuperadmin.php?page=student_list'">
+                    Back to List
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            <form action="" id="manage_student" class="needs-validation" novalidate>
+                <input type="hidden" name="id" value="<?php echo isset($id) ? $id : '' ?>">
+                
+                <div class="row g-4">
+                    <!-- Left Column -->
+                    <div class="col-md-6 border-end">
+                        <h6 class="text-muted mb-4 text-bold">Basic Information</h6>
+                        <div class="form-group mb-3">
+                            <label for="school_id" class="form-label fw-semibold">School ID</label>
+                            <input type="text" name="school_id" id="school_id" class="form-control" required value="<?php echo isset($school_id) ? $school_id : '' ?>" placeholder="Enter school ID">
+                            <div class="invalid-feedback">Please provide a School ID.</div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="firstname" class="form-label fw-semibold">First Name</label>
+                            <input type="text" name="firstname" class="form-control" required value="<?php echo isset($firstname) ? $firstname : '' ?>" placeholder="Enter first name">
+                            <div class="invalid-feedback">Please provide a First Name.</div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="lastname" class="form-label fw-semibold">Last Name</label>
+                            <input type="text" name="lastname" class="form-control" required value="<?php echo isset($lastname) ? $lastname : '' ?>" placeholder="Enter last name">
+                            <div class="invalid-feedback">Please provide a Last Name.</div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="department" class="form-label fw-semibold">Department</label>
+                            <select name="department" id="department" class="form-select" required>
+                                <option value="">Select Department</option>
+                                <?php 
+                                $departments = $conn->query("SELECT DISTINCT name as department FROM department_list ORDER BY name");
+                                while($row=$departments->fetch_assoc()):
+                                ?>
+                                <option value="<?php echo $row['department'] ?>" <?php echo isset($department) && $department == $row['department'] ? "selected" : "" ?>><?php echo $row['department'] ?></option>
+                                <?php endwhile; ?>
+                            </select>
+                            <div class="invalid-feedback">Please select a Department.</div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="class_id" class="form-label fw-semibold">Class</label>
+                            <select name="class_id" id="class_id" class="form-select" required>
+                                <option value="">Select Class</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a Class.</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-4 text-bold">Account Settings</h6>
+                        <div class="form-group mb-3">
+                            <label for="email" class="form-label fw-semibold">Email Address</label>
+                            <input type="email" name="email" id="email" class="form-control" 
+                                   value="<?php echo isset($email) ? $email : '' ?>" 
+                                   placeholder="Enter email address (optional)">
+                            <div class="invalid-feedback">Please provide a valid Email address if entering one.</div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password" class="form-label fw-semibold">Password</label>
+                            <input type="password" name="password" id="password" class="form-control" readonly>
+                            <small class="form-text text-muted">Password is automatically set to the Student ID</small>
+                        </div>
+                        <div class="form-group mb-4">
+                            <label for="cpass" class="form-label fw-semibold">Confirm Password</label>
+                            <input type="password" name="cpass" id="cpass" class="form-control" readonly>
+                            <small class="form-text text-muted">Password is automatically set to the Student ID</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label fw-semibold">Profile Picture (Optional)</label>
+                            <div class="d-flex align-items-center gap-4 p-3 bg-light rounded-3">
+                                <div class="avatar-preview">
+                                    <img src="<?php echo isset($avatar) ? 'assets/uploads/'.$avatar : 'assets/img/default-avatar.png' ?>" 
+                                         alt="Avatar" id="cimg" class="rounded shadow-sm" 
+                                         style="width: 100px; height: 100px; object-fit: cover;">
+                                </div>
+                                <div class="avatar-upload flex-grow-1">
+                                    <input type="file" class="form-control d-none" id="customFile" name="img" accept="image/*" onchange="displayImg(this,$(this))">
+                                    <button type="button" class="btn btn-primary w-100 mb-2" onclick="$('#customFile').click()">
+                                        <i data-lucide="upload-cloud" class="me-2"></i>Choose Photo
+                                    </button>
+                                    <div class="form-text text-center">Square image, 200x200px or larger</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-end mt-4 pt-3 border-top">
+                    <button type="button" class="btn btn-light me-2" onclick="location.href = 'indexsuperadmin.php?page=student_list'">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary-color: #007bff;
+    --primary-hover: #0056b3;
+}
+
+.card {
+    transition: box-shadow 0.3s ease;
+}
+
+.avatar-preview {
+    flex-shrink: 0;
+    padding: 0.5rem;
+}
+
+.avatar-preview img {
+    border: 3px solid #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.avatar-upload {
+    padding: 0.5rem;
+}
+
+.avatar-preview img:hover {
+    border-color: var(--primary-color);
+}
+
+.form-control, .form-select {
+    border: 1px solid #dee2e6;
+    padding: 0.6rem 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+.invalid-feedback {
+    font-size: 0.85rem;
+}
+
+.form-select {
+    width: 100%;
+    border-radius: 5px;
+}
+
+@media (max-width: 768px) {
+    .border-end {
+        border: none !important;
+    }
+}
+</style>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Bootstrap form validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+
+    // Auto-fill password fields when school ID changes
+    $('#school_id').on('input', function() {
+        var schoolId = $(this).val();
+        $('#password').val(schoolId);
+        $('#cpass').val(schoolId);
+    });
+
+    // Image preview with fade effect
+    function displayImg(input, _this) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                $('#cimg').fadeOut(200, function() {
+                    $(this).attr('src', e.target.result).fadeIn(200);
+                });
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    $(document).ready(function() {
+        // File input handling
+        $('#customFile').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            if (fileName) {
+                $('.avatar-upload .form-text').text('Selected: ' + fileName);
+            } else {
+                $('.avatar-upload .form-text').text('Square image, 200x200px or larger');
+            }
+        });
+
+        // Form submission
+        $('#manage_student').submit(function(e){
+            e.preventDefault();
+            if (this.checkValidity()) {
+                start_load();
+                $.ajax({
+                    url: 'ajax.php?action=save_student',
+                    data: new FormData($(this)[0]),
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    method: 'POST',
+                    type: 'POST',
+                    success: function(resp){
+                        if(resp == 1){
+                            alert_toast('Student successfully added!', "success");
+                            setTimeout(function(){
+                                location.replace('indexsuperadmin.php?page=student_list')
+                            },750)
+                        } else if(resp == 2){
+                            $('#email').addClass("is-invalid");
+                            $('#email').next('.invalid-feedback').text('This email address is already registered.');
+                            end_load();
+                        } else if(resp == 3){
+                            $('#school_id').addClass("is-invalid");
+                            $('#school_id').next('.invalid-feedback').text('This School ID is already in use.');
+                            end_load();
+                        }
+                    }
+                });
+            }
+        });
+
+        // Keep existing department change handler
+        $('#department').change(function(){
+            var selectedDepartment = $(this).val();
+            var classSelect = $('#class_id');
+            
+            // Clear current options
+            classSelect.html('<option value=""></option>');
+            
+            if(selectedDepartment) {
+                // Show loading indicator if you want
+                classSelect.append('<option value="">Loading...</option>');
+                
+                // Ajax call to fetch classes
+                $.ajax({
+                    url: 'ajax.php?action=get_classes_by_department_modified',
+                    method: 'POST',
+                    data: {department: selectedDepartment},
+                    dataType: 'json',
+                    success: function(response){
+                        // Clear the loading option
+                        classSelect.html('<option value=""></option>');
+                        
+                        console.log('Response:', response); // For debugging
+                        
+                        if(response.status === 'success' && response.classes.length > 0) {
+                            response.classes.forEach(function(classItem){
+                                var displayText = classItem.curriculum + ' ' + classItem.level + ' - ' + classItem.section;
+                                classSelect.append('<option value="' + classItem.id + '">' + displayText + '</option>');
+                            });
+                            
+                            // If editing and class_id is set, select it
+                            <?php if(isset($class_id)): ?>
+                            classSelect.val('<?php echo $class_id ?>');
+                            <?php endif; ?>
+                        } else {
+                            classSelect.append('<option value="">No classes found</option>');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        classSelect.html('<option value="">Error loading classes</option>');
+                    }
+                });
+            }
+        });
+
+        // Keep existing department trigger on page load
+        var selectedDepartment = $('#department').val();
+        if(selectedDepartment) {
+            $('#department').trigger('change');
+        }
+    });
 </script>
