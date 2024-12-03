@@ -17,16 +17,19 @@ Class Action {
 	    $this->db->close();
 	    ob_end_flush();
 	}
+
 	function login(){
 		extract($_POST);
 		$type = array("", "users", "faculty_list", "student_list");
 		$type2 = array("", "admin", "faculty", "student");
+		
 		// Check if the identifier is an email or school ID
 		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
 			$condition = "email = '".$identifier."'";
 		} else {
 			$condition = "school_id = '".$identifier."'";
 		}
+		
 		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM {$type[$login]} WHERE {$condition}");
 		if($qry->num_rows > 0){
 			$row = $qry->fetch_array();
@@ -50,7 +53,19 @@ Class Action {
 					$this->db->query($update_query);
 				}
 	
-				// Store user data in session
+				// Check if password needs to be changed (for students and faculty)
+				if($login != 1 && $row['is_password_changed'] == 0) {
+					// Store all necessary information in session
+					$_SESSION['login_id'] = $row['id']; // Add this line
+					$_SESSION['temp_user_id'] = $row['id'];
+					$_SESSION['temp_login_type'] = $login;
+					$_SESSION['temp_name'] = $row['name'];
+					$_SESSION['temp_email'] = $row['email'] ?? '';
+					$_SESSION['temp_table'] = $type[$login];
+					return 3; // Redirect to password change
+				}
+				
+				// Normal login process for users with changed passwords
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
 						$_SESSION['login_'.$key] = $value;
@@ -58,7 +73,6 @@ Class Action {
 				$_SESSION['login_id'] = $row['id'];
 				$_SESSION['login_type'] = $login;
 				$_SESSION['login_view_folder'] = $type2[$login].'/';
-				$_SESSION['user_id'] = $row['id']; // Added for password change functionality
 				
 				// Set academic data
 				$academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1");
@@ -69,19 +83,12 @@ Class Action {
 					}
 				}
 				
-				// Check if password needs to be changed (for students and faculty)
-				if($login != 1 && $row['is_password_changed'] == 0) {
-					return 3; // Redirect to password change
-				}
-				
 				return 1; // Normal login success
 			}
 			return 2; // Wrong password
 		}
 		return 2; // User not found
 	}
-
-
 
 
 
@@ -146,8 +153,6 @@ Class Action {
 		return 2; // User not found
 	}
 
-
-	
 	function login4() {
 		extract($_POST);
 		
@@ -209,10 +214,90 @@ Class Action {
 		return 2; // User not found
 	}
 
-
-
-
+	function login4_cme() {
+		extract($_POST);
 		
+		// Check if the identifier is an email
+		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+			$condition = "email = '".$identifier."'";
+		} else {
+			return 2; // Only email login is allowed for CME staff
+		}
+		
+		// Query the cme_staff table
+		$qry = $this->db->query("SELECT * FROM cme_staff WHERE {$condition}");
+		
+		if($qry->num_rows > 0) {
+			$data = $qry->fetch_array();
+			
+			// Verify password
+			if(password_verify($password, $data['password'])) {
+				// Set session variables
+				foreach($data as $key => $value) {
+					if($key != 'password' && !is_numeric($key))
+						$_SESSION['login_'.$key] = $value;
+				}
+				$_SESSION['login_id'] = $data['id'];
+				$_SESSION['login_type'] = 'CME';
+				$_SESSION['login_department'] = 'CME';
+				
+				return 'CME';
+			}
+			
+			// Log failed attempt
+			$stmt = $this->db->prepare("INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)");
+			$ip = $_SERVER['REMOTE_ADDR'];
+			$stmt->bind_param("ss", $identifier, $ip);
+			$stmt->execute();
+			
+			return 2; // Wrong password
+		}
+		return 2; // User not found
+	}
+
+
+	function login4_coe() {
+		extract($_POST);
+		
+		// Check if the identifier is an email
+		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+			$condition = "email = '".$identifier."'";
+		} else {
+			return 2; // Only email login is allowed for COE staff
+		}
+		
+		// Query the coe_staff table
+		$qry = $this->db->query("SELECT * FROM coe_staff WHERE {$condition}");
+		
+		if($qry->num_rows > 0) {
+			$data = $qry->fetch_array();
+			
+			// Verify password
+			if(password_verify($password, $data['password'])) {
+				// Set session variables
+				foreach($data as $key => $value) {
+					if($key != 'password' && !is_numeric($key))
+						$_SESSION['login_'.$key] = $value;
+				}
+				$_SESSION['login_id'] = $data['id'];
+				$_SESSION['login_type'] = 'COE';
+				$_SESSION['login_department'] = 'COE';
+				
+				return 'COE';
+			}
+			
+			// Log failed attempt
+			$stmt = $this->db->prepare("INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)");
+			$ip = $_SERVER['REMOTE_ADDR'];
+			$stmt->bind_param("ss", $identifier, $ip);
+			$stmt->execute();
+			
+			return 2; // Wrong password
+		}
+		return 2; // User not found
+	}
+
+	
 	
 	
 	// Optional: Function to check remember me token
@@ -229,10 +314,10 @@ Class Action {
 					}
 				}
 				$_SESSION['login_id'] = $row['id'];
-				$_SESSION['login_type'] = 3;
+				$_SESSION['login_type'] = 5;
 				$_SESSION['login_name'] = $row['firstname'] . ' ' . $row['lastname'];
 				$_SESSION['login_avatar'] = $row['avatar'];
-				$_SESSION['login_view_folder'] = 'admin/';
+				$_SESSION['login_view_folder'] = 'staff-cme/';
 				return true;
 			}
 		}
@@ -245,12 +330,22 @@ Class Action {
    //18/10/2024
    function send_verification(){
     extract($_POST);
-    $user_id = $_SESSION['login_id'];
+    
+    if (!isset($_SESSION['temp_user_id']) || !isset($_SESSION['temp_login_type'])) {
+        return 0; // Invalid session state
+    }
+    
+    $user_id = $_SESSION['temp_user_id'];
     $type = array("","users","faculty_list","student_list");
-    $table = $type[$_SESSION['login_type']];
+    $table = $type[$_SESSION['temp_login_type']];
+    
+    // Validate email format
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 5; // Invalid email format
+    }
     
     // Check if email already exists for any user
-    $check_email = $this->db->query("SELECT * FROM $table WHERE email = '$email'");
+    $check_email = $this->db->query("SELECT * FROM $table WHERE email = '$email' AND id != $user_id");
     if($check_email->num_rows > 0) {
         return 4; // Email already exists in database
     }
@@ -260,44 +355,51 @@ Class Action {
     $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
     
     $update = $this->db->query("UPDATE $table SET 
+        email = '$email',
         verification_code = '$verification_code', 
         verification_code_expiry = '$expiry' 
         WHERE id = $user_id");
     
     if($update) {
+        $_SESSION['temp_email'] = $email; // Store email in session
+        
         // Send email with verification code
         if($this->send_verification_email($email, $verification_code)) {
             return 1; // Email sent successfully
         } else {
             return 3; // Error sending email
         }
-    } else {
-        return 2; // Error updating verification code
     }
+    return 2; // Error updating verification code
 }
 
 function verify_code(){
     extract($_POST);
-    $user_id = $_SESSION['login_id'];
-    $type = array("","users","faculty_list","student_list");
-    $table = $type[$_SESSION['login_type']];
     
-    // Only check verification code for the logged-in user
+    if (!isset($_SESSION['temp_user_id']) || !isset($_SESSION['temp_login_type'])) {
+        return 0; // Invalid session state
+    }
+    
+    $user_id = $_SESSION['temp_user_id'];
+    $type = array("","users","faculty_list","student_list");
+    $table = $type[$_SESSION['temp_login_type']];
+    
+    // Check verification code
     $verify_query = $this->db->query("SELECT * FROM $table 
         WHERE id = $user_id 
         AND verification_code = '$verification_code' 
         AND verification_code_expiry > NOW()");
         
     if($verify_query->num_rows > 0) {
+        $_SESSION['email_verified'] = true;
         return 1; // Verification successful
     }
     return 0; // Verification failed
 }
-
 function change_password(){
     extract($_POST);
-    $user_id = $_SESSION['login_id'];
-    $user_type = $_SESSION['login_type'];
+    $user_id = $_SESSION['temp_user_id'];
+    $user_type = $_SESSION['temp_login_type'];
     
     if(!$this->validatePassword($new_password)){
         return 2; // Password doesn't meet requirements
@@ -335,6 +437,9 @@ function change_password(){
         WHERE id = $user_id");
     
     if($update){
+        // Clear temporary session data
+        unset($_SESSION['temp_user_id']);
+        unset($_SESSION['temp_login_type']);
         return 1; // Success
     }
     return 0; // Error
@@ -370,7 +475,7 @@ private function validatePassword($password) {
 
    function forgot_password() {
     extract($_POST);
-    $type = array("", "users", "faculty_list", "student_list");
+    $type = array("","users","faculty_list","student_list");
     $table = $type[$login];
     
     // Sanitize email input
@@ -378,7 +483,7 @@ private function validatePassword($password) {
     
     $qry = $this->db->query("SELECT * FROM $table WHERE email = '" . $this->db->real_escape_string($email) . "'");
     
-    if ($qry->num_rows > 0) {
+    if($qry->num_rows > 0) {
         $row = $qry->fetch_assoc();
         $verification_code = substr(md5(uniqid(mt_rand(), true)), 0, 6);
         $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
@@ -388,31 +493,33 @@ private function validatePassword($password) {
             verification_code_expiry = '" . $this->db->real_escape_string($expiry) . "' 
             WHERE id = " . (int)$row['id']);
         
-        if ($update) {
+        if($update) {
+            // Using the existing PHPMailer setup
             require 'vendor/autoload.php';
             $mail = new PHPMailer\PHPMailer\PHPMailer(true);
             
             try {
                 // Server settings
                 $mail->isSMTP();
-                $mail->Host = 'smtp.hostinger.com';
+                $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'admin@insightrix-ctu.website';
-                $mail->Password = 'Css@12345!';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
-                $mail->Port = 465;
+                $mail->Username = 'Renrenpasilang@gmail.com';
+                $mail->Password = 'jhmfczemtchqlnil';
+                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
                 
+                // Clear any previous recipients
                 $mail->clearAddresses();
                 
                 // Recipients
-                $mail->setFrom('admin@insightrix-ctu.website', 'Insightrix Support');
+                $mail->setFrom('Renrenpasilang@gmail.com', 'Insightrix Support');
                 $mail->addAddress($email);
                 
                 // Content
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Verification Code';
                 
-                // Professional email template
+                // Create a more professional email template
                 $emailBody = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                     <h2 style='color: #12686e;'>Password Reset Request</h2>
@@ -430,7 +537,7 @@ private function validatePassword($password) {
                 $mail->Body = $emailBody;
                 $mail->AltBody = "Your verification code is: {$verification_code}\nThis code will expire in 1 hour.";
                 
-                if ($mail->send()) {
+                if($mail->send()) {
                     return 1; // Success
                 } else {
                     error_log("Mailer Error: " . $mail->ErrorInfo);
@@ -448,7 +555,6 @@ private function validatePassword($password) {
         return 2; // Email not found
     }
 }
-
 	
 	
 
@@ -570,68 +676,39 @@ public function forgot_update_password() {
 	
 
 
-private function send_verification_email($email, $verification_code) {
-    require 'vendor/autoload.php';
+	private function send_verification_email($email, $verification_code) {
+		require 'vendor/autoload.php'; // Ensure PHPMailer is installed via Composer
+	
+		$mail = new PHPMailer\PHPMailer\PHPMailer(true);
+		try {
+			// Server settings
+			$mail->isSMTP();
+			$mail->Host       = 'smtp.gmail.com'; // Replace with your SMTP server
+			$mail->SMTPAuth   = true;
+			$mail->Username   = 'Renrenpasilang@gmail.com'; // Replace with your email
+			$mail->Password   = 'jhmfczemtchqlnil'; // Replace with your app password
+			$mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+			$mail->Port       = 587;
+	
+			// Recipients
+			$mail->setFrom('your-email@gmail.com', 'Your Name');  // Set sender
+			$mail->addAddress($email);  // Add recipient
+	
+			// Content
+			$mail->isHTML(true);
+			$mail->Subject = 'Email Verification';
+			$mail->Body    = "Your verification code is: <b>{$verification_code}</b>";
+	
+			$mail->send();
+			return true;
+		} catch (Exception $e) {
+			error_log("Mailer Error: {$mail->ErrorInfo}");  // Error logging
+			return false;
+		}
+	}
+		
 
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
-    try {
-        // Server settings
-		$mail->isSMTP();
-		$mail->Host = 'smtp.hostinger.com';
-		$mail->SMTPAuth = true;
-		$mail->Username = 'admin@insightrix-ctu.website';
-		$mail->Password = 'Css@12345!';
-		$mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS; // SSL encryption
-		$mail->Port = 465;
-        
-        // Debug mode - comment out in production
-        // $mail->SMTPDebug = SMTP::DEBUG_SERVER;
-        
-        // Set charset
-        $mail->CharSet = 'UTF-8';
-        
-        // Recipients
-        $mail->setFrom('admin@insightrix-ctu.website', 'Insightrix CTU');
-        $mail->addAddress($email);
-        
-        // Content
-        $mail->isHTML(true);
-        $mail->Subject = 'Email Verification';
-        
-        // More professional HTML email body
-        $mail->Body = '
-            <html>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                    <h2>Email Verification</h2>
-                    <p>Thank you for registering. Please use the following verification code to complete your registration:</p>
-                    <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; text-align: center; font-size: 24px; font-weight: bold;">
-                        ' . htmlspecialchars($verification_code) . '
-                    </div>
-                    <p>If you did not request this verification code, please ignore this email.</p>
-                    <p>Best regards,<br>Insightrix CTU Team</p>
-                </div>
-            </body>
-            </html>';
-        
-        // Plain text alternative
-        $mail->AltBody = "Your verification code is: {$verification_code}";
-        
-        $mail->send();
-        return true;
-        
-    } catch (Exception $e) {
-        // Enhanced error logging
-        error_log(sprintf(
-            "Email sending failed - Date: %s, To: %s, Error: %s",
-            date('Y-m-d H:i:s'),
-            $email,
-            $mail->ErrorInfo
-        ));
-        return false;
-    }
-}
 
 
 
@@ -660,13 +737,34 @@ private function send_verification_email($email, $verification_code) {
 
 	//staff
 	function logout4(){
-		session_destroy();
-		foreach ($_SESSION as $key => $value) {
-			unset($_SESSION[$key]);
+		// Start session if not already started
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
 		}
-		header("location:stafflogin.php");
+		
+		// Clear all session variables
+		$_SESSION = array();
+		
+		// Destroy the session cookie
+		if (isset($_COOKIE[session_name()])) {
+			setcookie(session_name(), '', time()-3600, '/');
+		}
+		
+		// Clear remember me token if it exists
+		if(isset($_COOKIE['staff_remember_token'])) {
+			setcookie('staff_remember_token', '', time()-3600, '/');
+		}
+		
+		// Destroy the session
+		session_destroy();
+		
+		// Set cache control headers
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
+		
+		return json_encode(['status' => 'success']);
 	}
-
 	
     // Add new method for change password logout
     function logout_change_password(){ 
@@ -782,100 +880,64 @@ private function send_verification_email($email, $verification_code) {
 			return 1;
 		}
 	}
-
-	function update_user(){
-		try {
-			extract($_POST);
-			$data = "";
-			$type = array("","users","faculty_list","student_list");
-			
-			// Validate login type exists in session
-			if(!isset($_SESSION['login_type']) || !isset($type[$_SESSION['login_type']])) {
-				return json_encode(['status' => 'error', 'message' => 'Invalid user type']);
-			}
-			
-			$table = $type[$_SESSION['login_type']];
-			
-			// Check if password is being updated
-			if(!empty($password)) {
-				// Get user's current password from database
-				$id = isset($id) ? intval($id) : 0;
-				$check_pass = $this->db->query("SELECT password FROM `{$table}` WHERE id = {$id}");
-				if($check_pass && $check_pass->num_rows > 0) {
-					$current_pass = $check_pass->fetch_assoc()['password'];
-					// Check if new password matches the old one
-					if(md5($password) === $current_pass) {
-						return 3; // Return code 3 for same password error
-					}
+	function update_user() {
+		extract($_POST);
+		$data = "";
+		$type = array("", "users", "faculty_list", "student_list");
+	
+		// Handle non-password fields first
+		foreach ($_POST as $k => $v) {
+			if (!in_array($k, array('id', 'cpass', 'table', 'password')) && !is_numeric($k)) {
+				if ($k == 'email' && empty($v)) {
+					continue; // Skip empty email field
+				}
+	
+				if (empty($data)) {
+					$data .= " $k='$v' ";
+				} else {
+					$data .= ", $k='$v' ";
 				}
 			}
-			
-			// Rest of your existing code...
-			foreach($_POST as $k => $v){
-				if(!in_array($k, array('id','cpass','table','password')) && !is_numeric($k)){
-					$v = $this->db->real_escape_string($v);
-					if(empty($data)){
-						$data .= " $k='$v' ";
-					}else{
-						$data .= ", $k='$v' ";
-					}
-				}
-			}
-			
-			// Check for duplicate email
-			$id = isset($id) ? intval($id) : 0;
-			$email = $this->db->real_escape_string($email);
-			$check = $this->db->query("SELECT * FROM `{$table}` WHERE email ='$email' ".(!empty($id) ? " AND id != {$id} " : ''));
-			
-			if(!$check) {
-				return json_encode(['status' => 'error', 'message' => 'Database error: ' . $this->db->error]);
-			}
-			
-			if($check->num_rows > 0){
+		}
+	
+		// Check email duplication if email is provided
+		if (isset($email) && !empty($email)) {
+			$check = $this->db->query("SELECT * FROM {$type[$_SESSION['login_type']]} where email ='$email' " . (!empty($id) ? " and id != {$id} " : ''))->num_rows;
+			if ($check > 0) {
 				return 2; // Email already exists
+				exit;
 			}
-			
-			// Handle image upload
-			if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != ''){
-				$fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
-				$move = move_uploaded_file($_FILES['img']['tmp_name'],'assets/uploads/'. $fname);
-				if($move){
-					$data .= ", avatar = '$fname' ";
-				}
+		}
+	
+		// Handle image upload
+		if (isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+			$fname = strtotime(date('y-m-d H:i')) . '_' . $_FILES['img']['name'];
+			$move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/' . $fname);
+			$data .= ", avatar = '$fname' ";
+		}
+	
+		// Only hash and update password if a new password is provided and it's not empty
+		if (isset($password) && !empty($password)) {
+			$hashed_password = password_hash($password, PASSWORD_DEFAULT);
+			$data .= ", password='$hashed_password' ";
+		}
+	
+		if (empty($id)) {
+			$save = $this->db->query("INSERT INTO {$type[$_SESSION['login_type']]} set $data");
+		} else {
+			$save = $this->db->query("UPDATE {$type[$_SESSION['login_type']]} set $data where id = $id");
+		}
+		if ($save) {
+			foreach ($_POST as $key => $value) {
+				if ($key != 'password' && !is_numeric($key))
+					$_SESSION['login_' . $key] = $value;
 			}
-			
-			// Handle password update
-			if(!empty($password)) {
-				$password = $this->db->real_escape_string($password);
-				$data .= " ,password=md5('$password') ";
-			}
-			
-			// Perform update or insert
-			if(empty($id)){
-				$query = "INSERT INTO `{$table}` SET $data";
-			}else{
-				$query = "UPDATE `{$table}` SET $data WHERE id = $id";
-			}
-			
-			$save = $this->db->query($query);
-			
-			if($save){
-				foreach ($_POST as $key => $value) {
-					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
-				}
-				if(isset($_FILES['img']) && !empty($_FILES['img']['tmp_name']))
-					$_SESSION['login_avatar'] = $fname;
-				
-				return 1;
-			}else{
-				return json_encode(['status' => 'error', 'message' => 'Database error: ' . $this->db->error]);
-			}
-			
-		} catch (Exception $e) {
-			return json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+			if (isset($_FILES['img']) && !empty($_FILES['img']['tmp_name']))
+				$_SESSION['login_avatar'] = $fname;
+			return 1;
 		}
 	}
+	  
 	function delete_user(){
 		extract($_POST);
 		$delete = $this->db->query("DELETE FROM users where id = ".$id);
@@ -1009,19 +1071,35 @@ private function send_verification_email($email, $verification_code) {
 				}
 			}
 		}
-		// Modified check to include department
-		$chk = $this->db->query("SELECT * FROM class_list where curriculum = '$curriculum' and level = '$level' and section = '$section' and department = '$department' and id != '{$id}' ")->num_rows;
+		
+		// Modified check to include department and schedule_type
+		$chk = $this->db->query("SELECT * FROM class_list 
+			where curriculum = '$curriculum' 
+			and level = '$level' 
+			and section = '$section' 
+			and department = '$department'
+			and schedule_type = '$schedule_type'
+			and id != '{$id}' ")->num_rows;
+			
 		if($chk > 0){
-			return 2; // Class already exists in this department
+			return 2; // Class already exists in this department with the same schedule
 		}
+		
 		if(isset($user_ids)){
 			$data .= ", user_ids='".implode(',',$user_ids)."' ";
 		}
+		
+		// Validate schedule_type
+		if(!in_array($schedule_type, ['DAY', 'NIGHT'])) {
+			$schedule_type = 'DAY'; // Set default if invalid value is provided
+		}
+		
 		if(empty($id)){
 			$save = $this->db->query("INSERT INTO class_list set $data");
 		}else{
 			$save = $this->db->query("UPDATE class_list set $data where id = $id");
 		}
+		
 		if($save){
 			return 1;
 		}
@@ -1212,16 +1290,19 @@ private function send_verification_email($email, $verification_code) {
 	}
 
 
-	
-	function save_faculty(){
+	function save_faculty() {
 		extract($_POST);
 		$data = "";
 		foreach($_POST as $k => $v){
 			if(!in_array($k, array('id', 'cpass', 'password')) && !is_numeric($k)){
+				if($k === 'email' && empty($v)) continue;
+				
+				$sanitized_value = $this->db->real_escape_string($v);
+				
 				if(empty($data)){
-					$data .= " $k='$v' ";
+					$data .= " $k='$sanitized_value' ";
 				} else {
-					$data .= ", $k='$v' ";
+					$data .= ", $k='$sanitized_value' ";
 				}
 			}
 		}
@@ -1232,10 +1313,13 @@ private function send_verification_email($email, $verification_code) {
 			$data .= ", password='$hashed_password' ";
 		}
 	
-		$check = $this->db->query("SELECT * FROM faculty_list WHERE email ='$email' " . (!empty($id) ? " AND id != {$id}" : ''))->num_rows;
-		if($check > 0){
-			return 2;
-			exit;
+		// Only check for duplicate email if an email is provided
+		if(!empty($email)){
+			$check = $this->db->query("SELECT * FROM faculty_list WHERE email ='$email' " . (!empty($id) ? " AND id != {$id}" : ''))->num_rows;
+			if($check > 0){
+				return 2;
+				exit;
+			}
 		}
 	
 		$check = $this->db->query("SELECT * FROM faculty_list WHERE school_id ='$school_id' " . (!empty($id) ? " AND id != {$id}" : ''))->num_rows;
@@ -1244,10 +1328,24 @@ private function send_verification_email($email, $verification_code) {
 			exit;
 		}
 	
+		// Handle file upload
 		if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != ''){
+			$upload_path = 'assets/uploads/';
+			
+			// Create directory if it doesn't exist
+			if (!is_dir($upload_path)) {
+				mkdir($upload_path, 0777, true);
+			}
+			
 			$fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
-			$move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/'. $fname);
-			$data .= ", avatar = '$fname' ";
+			$move = move_uploaded_file($_FILES['img']['tmp_name'], $upload_path . $fname);
+			
+			if($move){
+				$data .= ", avatar = '$fname' ";
+			} else {
+				error_log("Failed to move uploaded file. Upload path: " . $upload_path . $fname);
+				return 4; // New error code for file upload failure
+			}
 		}
 	
 		if(empty($id)){
@@ -1259,6 +1357,7 @@ private function send_verification_email($email, $verification_code) {
 		if($save){
 			return 1;
 		}
+		return 0;
 	}
 	
 	function delete_faculty(){
@@ -1269,6 +1368,14 @@ private function send_verification_email($email, $verification_code) {
 	}
 	function save_student(){
 		extract($_POST);
+		
+		// Check for duplicate School ID
+		$check_school_id = $this->db->query("SELECT * FROM student_list WHERE school_id = '$school_id'" . (!empty($id) ? " AND id != {$id}" : ''))->num_rows;
+		if($check_school_id > 0){
+			return 3; // School ID already exists
+			exit;
+		}
+		
 		$data = "";
 		foreach($_POST as $k => $v){
 			if(!in_array($k, array('id', 'cpass', 'password', 'department')) && !is_numeric($k)){
@@ -1420,6 +1527,7 @@ private function send_verification_email($email, $verification_code) {
 
 
 
+
  function delete_multiple_evaluations(){
     extract($_POST);
     
@@ -1462,105 +1570,225 @@ private function send_verification_email($email, $verification_code) {
 
 
 
-	function save_restriction(){
-		extract($_POST);
-		$filtered = implode(",",array_filter($rid));
-		if(!empty($filtered))
-			$this->db->query("DELETE FROM restriction_list where id not in ($filtered) and academic_id = $academic_id");
-		else
-			$this->db->query("DELETE FROM restriction_list where  academic_id = $academic_id");
-		foreach($rid as $k => $v){
-			$data = " academic_id = $academic_id ";
-			$data .= ", faculty_id = {$faculty_id[$k]} ";
-			$data .= ", class_id = {$class_id[$k]} ";
-			$data .= ", subject_id = {$subject_id[$k]} ";
-			if(empty($v)){
-				$save[] = $this->db->query("INSERT INTO restriction_list set $data ");
-			}else{
-				$save[] = $this->db->query("UPDATE restriction_list set $data where id = $v ");
-			}
-		}
-			return 1;
-	}
-	function save_evaluation() {
-		try {
-			if (!isset($_SESSION['login_id']) || !isset($_SESSION['academic']['id'])) {
-				throw new Exception('Session data missing');
-			}
-	
-			extract($_POST);
-	
-			// Begin transaction
-			$this->db->begin_transaction();
-	
-			// Prepare evaluation data
-			$eval_data = array(
-				'student_id' => $_SESSION['login_id'],
-				'academic_id' => $_SESSION['academic']['id'],
-				'subject_id' => $subject_id,
-				'class_id' => $class_id,
-				'restriction_id' => $restriction_id,
-				'faculty_id' => $faculty_id
-			);
-	
-			// Add comment if provided
-			if (!empty($comment)) {
-				$eval_data['comment'] = $this->db->real_escape_string(strip_tags($comment));
-			}
-	
-			// Insert evaluation
-			$columns = implode(", ", array_keys($eval_data));
-			$values = implode("', '", array_values($eval_data));
-			$sql = "INSERT INTO evaluation_list ($columns) VALUES ('$values')";
-			
-			if (!$this->db->query($sql)) {
-				throw new Exception("Failed to save evaluation");
-			}
-	
-			$evaluation_id = $this->db->insert_id;
-	
-			// Insert answers
-			foreach ($qid as $q_id) {
-				if (!isset($rate[$q_id])) continue;
-				
-				$rating = intval($rate[$q_id]);
-				if ($rating < 1 || $rating > 5) continue;
-				
-				$answer_sql = "INSERT INTO evaluation_answers (evaluation_id, question_id, rate) 
-							  VALUES ($evaluation_id, $q_id, $rating)";
-				
-				if (!$this->db->query($answer_sql)) {
-					throw new Exception("Failed to save evaluation answers");
-				}
-			}
-	
-			// Check for low ratings with the current evaluation data
-			$check_data = array(
-				'academic_id' => $_SESSION['academic']['id'],
-				'faculty_id' => $faculty_id,
-				'subject_id' => $subject_id,
-				'class_id' => $class_id
-			);
-			
-			$this->check_low_ratings($check_data);
-	
-			// Commit transaction
-			$this->db->commit();
-	
-			return json_encode(array(
-				'status' => 'success',
-				'message' => 'Evaluation saved successfully'
-			));
-	
-		} catch (Exception $e) {
-			// Rollback transaction on error
-			$this->db->rollback();
-			return json_encode(array(
-				'status' => 'error',
-				'message' => $e->getMessage()
-			));
-		}
-	}
+
+function save_restriction() {
+    extract($_POST);
+    
+    try {
+        $this->db->query("START TRANSACTION");
+        
+        // Ensure academic_id is valid
+        if (!isset($academic_id) || empty($academic_id)) {
+            throw new Exception("Invalid academic ID");
+        }
+
+        // First, get ALL existing restrictions regardless of pagination
+        $all_existing = [];
+        $existing_query = $this->db->query("SELECT id, faculty_id, class_id, subject_id 
+                                          FROM restriction_list 
+                                          WHERE academic_id = " . intval($academic_id));
+                                          
+        while ($row = $existing_query->fetch_assoc()) {
+            $key = $row['faculty_id'] . '-' . $row['class_id'] . '-' . $row['subject_id'];
+            $all_existing[$key] = $row['id'];
+        }
+        
+        // Get submitted data from all department tables
+        $submitted_data = [];
+        
+        // Process all submitted records (including those from hidden pages)
+        if (isset($faculty_id) && is_array($faculty_id)) {
+            foreach ($faculty_id as $k => $fid) {
+                if (empty($fid) || empty($class_id[$k]) || empty($subject_id[$k])) {
+                    continue;
+                }
+                
+                $key = $fid . '-' . $class_id[$k] . '-' . $subject_id[$k];
+                $submitted_data[$key] = [
+                    'faculty_id' => intval($fid),
+                    'class_id' => intval($class_id[$k]),
+                    'subject_id' => intval($subject_id[$k]),
+                    'rid' => isset($rid[$k]) ? intval($rid[$k]) : null
+                ];
+            }
+        }
+        
+        // Process updates and inserts
+        foreach ($submitted_data as $key => $data) {
+            if (isset($all_existing[$key])) {
+                // Update existing record
+                $update_sql = "UPDATE restriction_list SET 
+                              faculty_id = {$data['faculty_id']},
+                              class_id = {$data['class_id']},
+                              subject_id = {$data['subject_id']}
+                              WHERE id = {$all_existing[$key]}
+                              AND academic_id = " . intval($academic_id);
+                              
+                if (!$this->db->query($update_sql)) {
+                    throw new Exception("Failed to update restriction: " . $this->db->error);
+                }
+            } else {
+                // Insert new record
+                $insert_sql = "INSERT INTO restriction_list 
+                              (academic_id, faculty_id, class_id, subject_id)
+                              VALUES 
+                              (" . intval($academic_id) . ", 
+                               {$data['faculty_id']}, 
+                               {$data['class_id']}, 
+                               {$data['subject_id']})";
+                               
+                if (!$this->db->query($insert_sql)) {
+                    throw new Exception("Failed to insert restriction: " . $this->db->error);
+                }
+            }
+        }
+        
+        // Only delete records that are no longer in the submitted data
+        $to_delete = array_diff_key($all_existing, $submitted_data);
+        
+        if (!empty($to_delete)) {
+            $delete_ids = implode(",", $to_delete);
+            $delete_sql = "DELETE FROM restriction_list 
+                          WHERE id IN ($delete_ids) 
+                          AND academic_id = " . intval($academic_id);
+                          
+            if (!$this->db->query($delete_sql)) {
+                throw new Exception("Failed to delete restrictions: " . $this->db->error);
+            }
+        }
+        
+        $this->db->query("COMMIT");
+        return 1;
+        
+    } catch (Exception $e) {
+        $this->db->query("ROLLBACK");
+        error_log("Save restriction error: " . $e->getMessage());
+        return 2;
+    }
+}
+
+
+
+
+
+function save_evaluation() {
+    try {
+        // Start transaction
+        $this->db->begin_transaction();
+
+        // Get POST data
+        extract($_POST);
+
+        // Verify required fields
+        if (!isset($restriction_id) || !isset($faculty_id) || !isset($class_id) || !isset($subject_id)) {
+            throw new Exception("Missing required fields");
+        }
+
+        // Get current academic year
+        $academic_qry = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1");
+        if (!$academic_qry || $academic_qry->num_rows <= 0) {
+            throw new Exception("No default academic year set");
+        }
+        $academic = $academic_qry->fetch_assoc();
+
+        // Insert evaluation header
+        $eval_query = "INSERT INTO evaluation_list (
+            academic_id,
+            class_id,
+            student_id,
+            subject_id,
+            faculty_id,
+            restriction_id,
+            date_taken,
+            comment
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param(
+            "iiiiiss",
+            $academic['id'],
+            $class_id,
+            $_SESSION['login_id'],
+            $subject_id,
+            $faculty_id,
+            $restriction_id,
+            $comment
+        );
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Failed to save evaluation header");
+        }
+        
+        $evaluation_id = $stmt->insert_id;
+
+        // Save evaluation answers
+        foreach ($rate as $question_id => $rating) {
+            $answer_query = "INSERT INTO evaluation_answers (
+                evaluation_id,
+                question_id,
+                rate
+            ) VALUES (?, ?, ?)";
+            
+            $answer_stmt = $this->db->prepare($answer_query);
+            $answer_stmt->bind_param("iii", $evaluation_id, $question_id, $rating);
+            
+            if (!$answer_stmt->execute()) {
+                throw new Exception("Failed to save evaluation answer");
+            }
+        }
+
+        // Create notification
+        $notify_query = "INSERT INTO notifications (
+            faculty_id,
+            message,
+            subject_id,
+            class_id
+        ) VALUES (?, ?, ?, ?)";
+
+        // Get subject and class details for notification
+        $details_query = "SELECT 
+            s.code as subject_code,
+            s.subject as subject_name,
+            c.level,
+            c.section
+        FROM subject_list s 
+        JOIN class_list c ON c.id = ?
+        WHERE s.id = ?";
+        
+        $details_stmt = $this->db->prepare($details_query);
+        $details_stmt->bind_param("ii", $class_id, $subject_id);
+        $details_stmt->execute();
+        $details = $details_stmt->get_result()->fetch_assoc();
+
+        $message = sprintf(
+            "New evaluation submitted for %s - %s (%s-%s)",
+            $details['subject_code'],
+            $details['subject_name'],
+            $details['level'],
+            $details['section']
+        );
+
+        $notify_stmt = $this->db->prepare($notify_query);
+        $notify_stmt->bind_param("isii", $faculty_id, $message, $subject_id, $class_id);
+        
+        if (!$notify_stmt->execute()) {
+            throw new Exception("Failed to create notification");
+        }
+
+        // Commit transaction
+        $this->db->commit();
+        return 1;
+
+    } catch (Exception $e) {
+        // Rollback transaction on error
+        $this->db->rollback();
+        error_log("Error saving evaluation: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+}
 	
 	
 	// Add this function to calculate current average rating
@@ -1799,23 +2027,31 @@ private function send_verification_email($email, $verification_code) {
 			$stmt->bind_param("is", $faculty_id, $message);
 			return $stmt->execute();
 		}
-		
 		function get_notifications() {
 			extract($_POST);
 			
 			if(!isset($faculty_id)) return json_encode([]);
 			
-			$query = "SELECT n.*, 
-					 DATE_FORMAT(n.created_at, '%M %d, %Y %h:%i %p') as formatted_date,
-					 CASE 
-						 WHEN n.created_at > NOW() - INTERVAL 24 HOUR THEN 1 
-						 ELSE 0 
-					 END as is_recent 
-					 FROM notifications n 
-					 WHERE n.faculty_id = ? 
-					 ORDER BY n.is_read ASC, n.created_at DESC 
-					 LIMIT 50";
-					 
+			$query = "SELECT 
+				n.*,
+				DATE_FORMAT(n.created_at, '%M %d, %Y %h:%i %p') as formatted_date,
+				CASE 
+					WHEN n.created_at > NOW() - INTERVAL 24 HOUR THEN 1 
+					ELSE 0 
+				END as is_recent,
+				s.code as subject_code,
+				s.subject as subject_name,
+				cl.level as class_level,
+				cl.section as class_section,
+				cl.curriculum as class_curriculum,
+				ROUND(n.rating_value, 2) as rating_average
+			FROM notifications n 
+			LEFT JOIN subject_list s ON n.subject_id = s.id
+			LEFT JOIN class_list cl ON n.class_id = cl.id
+			WHERE n.faculty_id = ? 
+			ORDER BY n.created_at DESC, n.is_read ASC
+			LIMIT 50";
+			
 			$stmt = $this->db->prepare($query);
 			$stmt->bind_param("i", $faculty_id);
 			$stmt->execute();
@@ -1823,62 +2059,91 @@ private function send_verification_email($email, $verification_code) {
 			
 			$notifications = array();
 			while($row = $result->fetch_assoc()) {
+				// Format notification based on type
+				if($row['notification_type'] == 'evaluation') {
+					$class_info = sprintf(
+						"%s %s-%s",
+						$row['class_curriculum'], // e.g., BSIT
+						$row['class_level'],      // e.g., 4
+						$row['class_section']     // e.g., A
+					);
+					
+					$rating_text = isset($row['rating_average']) ? 
+						sprintf("(Rating: %.2f/5)", $row['rating_average']) : '';
+					
+					$row['message'] = sprintf(
+						"New evaluation submitted for %s - %s (%s) %s",
+						$row['subject_code'],
+						$row['subject_name'],
+						$class_info,
+						$rating_text
+					);
+				}
 				$notifications[] = $row;
 			}
 			
 			return json_encode($notifications);
 		}
-		
+
+
 		function mark_notification_read() {
 			extract($_POST);
 			
 			if(!isset($notification_id)) {
-				return json_encode([
-					'status' => 'error',
-					'message' => 'Notification ID is required'
-				]);
+				return json_encode(['status' => 'error', 'message' => 'Notification ID is required']);
 			}
 			
-			$query = "UPDATE notifications SET is_read = 1 
-					 WHERE id = ? AND faculty_id = ?";
+			$query = "UPDATE notifications SET is_read = 1 WHERE id = ?";
 			$stmt = $this->db->prepare($query);
-			$stmt->bind_param("ii", $notification_id, $_SESSION['login_id']);
+			$stmt->bind_param("i", $notification_id);
 			
 			if($stmt->execute()) {
-				return json_encode([
-					'status' => 'success',
-					'message' => 'Notification marked as read'
-				]);
+				return json_encode(['status' => 'success']);
 			} else {
-				return json_encode([
-					'status' => 'error',
-					'message' => 'Failed to mark notification as read'
-				]);
+				return json_encode(['status' => 'error', 'message' => $this->db->error]);
 			}
 		}
 		
 		function mark_all_notifications_read() {
 			extract($_POST);
 			
-			if(!isset($faculty_id)) return false;
+			if(!isset($faculty_id)) {
+				return json_encode(['status' => 'error', 'message' => 'Faculty ID is required']);
+			}
 			
-			$query = "UPDATE notifications SET is_read = 1 
-					 WHERE faculty_id = ?";
+			$query = "UPDATE notifications SET is_read = 1 WHERE faculty_id = ?";
 			$stmt = $this->db->prepare($query);
 			$stmt->bind_param("i", $faculty_id);
-			return $stmt->execute();
+			
+			if($stmt->execute()) {
+				return json_encode(['status' => 'success']);
+			} else {
+				return json_encode(['status' => 'error', 'message' => $this->db->error]);
+			}
 		}
-
+		
 		function delete_all_notifications() {
 			extract($_POST);
 			
-			if(!isset($faculty_id)) return false;
+			if(!isset($faculty_id)) {
+				return json_encode(['status' => 'error', 'message' => 'Faculty ID is required']);
+			}
 			
 			$query = "DELETE FROM notifications WHERE faculty_id = ?";
 			$stmt = $this->db->prepare($query);
 			$stmt->bind_param("i", $faculty_id);
-			return $stmt->execute();
+			
+			if($stmt->execute()) {
+				return json_encode(['status' => 'success']);
+			} else {
+				return json_encode(['status' => 'error', 'message' => $this->db->error]);
+			}
 		}
+		
+		
+		
+		
+		
 		
 		
 
@@ -2034,129 +2299,144 @@ private function send_verification_email($email, $verification_code) {
 			}
 		}
 	}
-		function save_staff() {
-			// Database connection assumed to be available as $this->db
-			
-			// Extract POST data
-			$id = $_POST['id'] ?? '';
-			$firstname = $_POST['firstname'] ?? '';
-			$lastname = $_POST['lastname'] ?? '';
-			$email = $_POST['email'] ?? '';
-			$password = $_POST['password'] ?? '';
-			
-			// Basic validation for required fields
-			if(empty($firstname) || empty($lastname) || empty($email)) {
-				return 3; // Missing required fields
+	function save_staff() {
+		// Database connection assumed to be available as $this->db
+		
+		// Extract POST data
+		$id = $_POST['id'] ?? '';
+		$firstname = $_POST['firstname'] ?? '';
+		$lastname = $_POST['lastname'] ?? '';
+		$email = $_POST['email'] ?? '';
+		$password = $_POST['password'] ?? '';
+		$department = $_POST['department'] ?? null; // Added department field
+		
+		// Basic validation for required fields
+		if(empty($firstname) || empty($lastname) || empty($email)) {
+			return 3; // Missing required fields
+		}
+		
+		// Sanitize inputs
+		$firstname = $this->db->real_escape_string($firstname);
+		$lastname = $this->db->real_escape_string($lastname);
+		$email = $this->db->real_escape_string($email);
+		$department = $department ? $this->db->real_escape_string($department) : null;
+		
+		try {
+			if(!empty($id)) {
+				// EDIT MODE
+				// Check if email exists but exclude current user
+				$check = $this->db->query("SELECT id FROM staff WHERE email = '$email' AND id != '$id'");
+				if($check->num_rows > 0) {
+					return 2; // Email already exists
+				}
+				
+				// Build update query
+				$query = "UPDATE staff SET 
+					firstname = '$firstname',
+					lastname = '$lastname',
+					email = '$email',
+					department = " . ($department ? "'$department'" : "NULL");
+				
+				// Only update password if provided
+				if(!empty($password)) {
+					$hashed_password = password_hash($password, PASSWORD_BCRYPT);
+					$query .= ", password = '$hashed_password'";
+				}
+				
+				$query .= " WHERE id = '$id'";
+				
+			} else {
+				// NEW STAFF MODE
+				// Check if email exists
+				$check = $this->db->query("SELECT id FROM staff WHERE email = '$email'");
+				if($check->num_rows > 0) {
+					return 2; // Email already exists
+				}
+				
+				// Hash password (required for new staff)
+				if(empty($password)) {
+					return 3; // Password required for new staff
+				}
+				$hashed_password = password_hash($password, PASSWORD_BCRYPT);
+				
+				// Insert query
+				$query = "INSERT INTO staff SET 
+					firstname = '$firstname',
+					lastname = '$lastname',
+					email = '$email',
+					department = " . ($department ? "'$department'" : "NULL") . ",
+					password = '$hashed_password',
+					date_created = NOW(),
+					is_password_changed = 0";
 			}
 			
-			// Sanitize inputs
-			$firstname = $this->db->real_escape_string($firstname);
-			$lastname = $this->db->real_escape_string($lastname);
-			$email = $this->db->real_escape_string($email);
+			// Execute query
+			$save = $this->db->query($query);
 			
-			try {
-				if(!empty($id)) {
-					// EDIT MODE
-					// Check if email exists but exclude current user
-					$check = $this->db->query("SELECT id FROM staff WHERE email = '$email' AND id != '$id'");
-					if($check->num_rows > 0) {
-						return 2; // Email already exists
-					}
-					
-					// Build update query
-					$query = "UPDATE staff SET 
-						firstname = '$firstname',
-						lastname = '$lastname',
-						email = '$email'";
-					
-					// Only update password if provided
-					if(!empty($password)) {
-						$hashed_password = password_hash($password, PASSWORD_BCRYPT);
-						$query .= ", password = '$hashed_password'";
-					}
-					
-					$query .= " WHERE id = '$id'";
-					
-				} else {
-					// NEW STAFF MODE
-					// Check if email exists
-					$check = $this->db->query("SELECT id FROM staff WHERE email = '$email'");
-					if($check->num_rows > 0) {
-						return 2; // Email already exists
-					}
-					
-					// Hash password (required for new staff)
-					if(empty($password)) {
-						return 3; // Password required for new staff
-					}
-					$hashed_password = password_hash($password, PASSWORD_BCRYPT);
-					
-					// Insert query
-					$query = "INSERT INTO staff SET 
-						firstname = '$firstname',
-						lastname = '$lastname',
-						email = '$email',
-						password = '$hashed_password',
-						date_created = NOW(),
-						is_password_changed = 0";
-				}
-				
-				// Execute query
-				$save = $this->db->query($query);
-				
-				if($save) {
-					return 1; // Success
-				} else {
-					return 0; // Database error
-				}
-				
-			} catch (Exception $e) {
-				error_log("Error saving staff: " . $e->getMessage());
+			if($save) {
+				return 1; // Success
+			} else {
 				return 0; // Database error
 			}
+			
+		} catch (Exception $e) {
+			error_log("Error saving staff: " . $e->getMessage());
+			return 0; // Database error
 		}
+	}
 	
-// Inside your crud class
-
+	function update_staff() {
+		extract($_POST);
+		$data = "";
 		
-		
-		function update_staff(){
-			extract($_POST);
-			$data = "";
-			foreach($_POST as $k => $v){
-				if(!in_array($k, array('id', 'cpass', 'password')) && !is_numeric($k)){
-					if(empty($data)){
-						$data .= " $k='$v' ";
-					} else {
-						$data .= ", $k='$v' ";
-					}
+		// Handle all fields except special cases
+		foreach($_POST as $k => $v) {
+			if(!in_array($k, array('id', 'cpass', 'password', 'department')) && !is_numeric($k)) {
+				if(empty($data)) {
+					$data .= " $k='" . $this->db->real_escape_string($v) . "' ";
+				} else {
+					$data .= ", $k='" . $this->db->real_escape_string($v) . "' ";
 				}
 			}
-		
-			if(!empty($password)){
-				$hashed_password = password_hash($password, PASSWORD_BCRYPT);
-				$data .= ", password='$hashed_password' ";
-				$data .= ", is_password_changed = 1";
-			}
-		
-			$check = $this->db->query("SELECT * FROM staff WHERE email ='$email' AND id != {$id}")->num_rows;
-			if($check > 0){
-				return 2;
-				exit;
-			}
-		
-			if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != ''){
-				$fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
-				$move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/'. $fname);
-				$data .= ", avatar = '$fname' ";
-			}
-		
-			$save = $this->db->query("UPDATE staff SET $data WHERE id = $id");
-		
-			if($save){
-				return 1;
-			}
 		}
+		
+		// Handle department separately since it can be NULL
+		if(isset($_POST['department']) && $_POST['department'] !== '') {
+			$department = $this->db->real_escape_string($_POST['department']);
+			$data .= empty($data) ? " department='$department' " : ", department='$department' ";
+		} else {
+			$data .= empty($data) ? " department=NULL " : ", department=NULL ";
+		}
+		
+		// Handle password update if provided
+		if(!empty($password)) {
+			$hashed_password = password_hash($password, PASSWORD_BCRYPT);
+			$data .= ", password='$hashed_password' ";
+			$data .= ", is_password_changed = 1";
+		}
+		
+		// Check for duplicate email
+		$check = $this->db->query("SELECT * FROM staff WHERE email ='" . $this->db->real_escape_string($email) . "' AND id != {$id}")->num_rows;
+		if($check > 0) {
+			return 2;
+			exit;
+		}
+		
+		// Handle file upload if present
+		if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+			$fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
+			$move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/'. $fname);
+			$data .= ", avatar = '$fname' ";
+		}
+		
+		// Update the staff record
+		$save = $this->db->query("UPDATE staff SET $data WHERE id = $id");
+		
+		if($save) {
+			return 1;
+		}
+		return 0;
+	}
 
 		function check_academic_year() {
 			$query = "SELECT * FROM academic_list WHERE is_default = 1 LIMIT 1";
@@ -2211,39 +2491,38 @@ private function send_verification_email($email, $verification_code) {
 		function send_evaluation_to_all_students() {
 			extract($_POST);
 		
-			if(!isset($academic_id)) {
+			if (!isset($academic_id)) {
 				return 2; // Invalid academic year
 			}
 		
 			try {
 				$this->db->query("START TRANSACTION");
 		
-				// Get all students with their class and department information
-				$student_query = "SELECT DISTINCT 
-									s.id as student_id,
-									s.class_id,
-									c.department as class_department
-								 FROM student_list s
-								 INNER JOIN class_list c ON s.class_id = c.id
-								 WHERE c.department != ''";
-				$students = $this->db->query($student_query);
+				// Get active faculty assignments with student and class information
+				$assignment_query = "
+					SELECT DISTINCT
+						fa.faculty_id,
+						fa.class_id,
+						fa.subject_id,
+						fa.academic_year_id,
+						fa.semester,
+						c.department as class_department
+					FROM faculty_assignments fa
+					INNER JOIN class_list c ON fa.class_id = c.id
+					INNER JOIN student_list s ON s.class_id = fa.class_id
+					WHERE fa.is_active = 1 
+					AND fa.academic_year_id = ?
+					AND c.department != ''";
 		
-				// Get faculty from relevant departments
-				$faculty_query = "SELECT id, department 
-								 FROM faculty_list 
-								 WHERE department != ''";
-				$faculty = $this->db->query($faculty_query);
+				$stmt = $this->db->prepare($assignment_query);
+				$stmt->bind_param("i", $academic_id);
+				$stmt->execute();
+				$assignments = $stmt->get_result();
 		
-				// Get subjects from relevant departments
-				$subject_query = "SELECT id, department 
-								 FROM subject_list 
-								 WHERE department != ''";
-				$subjects = $this->db->query($subject_query);
-		
-				// Check if we have necessary data
-				if(!$students->num_rows || !$faculty->num_rows || !$subjects->num_rows) {
+				// Check if we have any assignments to process
+				if (!$assignments->num_rows) {
 					$this->db->query("ROLLBACK");
-					return 3; // No data to process
+					return 3; // No assignments to process
 				}
 		
 				// Clear existing restrictions for this academic year
@@ -2251,55 +2530,55 @@ private function send_verification_email($email, $verification_code) {
 				$clear_stmt->bind_param("i", $academic_id);
 				$clear_stmt->execute();
 		
-				// Prepare the insert statement
-				$insert_stmt = $this->db->prepare("INSERT INTO restriction_list 
+				// Prepare the insert statement for restrictions
+				$insert_stmt = $this->db->prepare("
+					INSERT INTO restriction_list 
 					(academic_id, faculty_id, class_id, subject_id) 
-					VALUES (?, ?, ?, ?)");
+					VALUES (?, ?, ?, ?)
+				");
 		
 				$restrictions_added = false;
 		
-				// Process each student's class
-				while($student = $students->fetch_assoc()) {
-					$faculty->data_seek(0);
-					while($faculty_row = $faculty->fetch_assoc()) {
-						// Check if faculty is in the same department as the student's class
-						if($faculty_row['department'] === $student['class_department']) {
-							$subjects->data_seek(0);
-							while($subject = $subjects->fetch_assoc()) {
-								// Check if subject is in the same department
-								if($subject['department'] === $student['class_department']) {
-									// Check if this combination already exists for this class
-									$check_query = "SELECT id FROM restriction_list 
-												  WHERE academic_id = ? 
-												  AND faculty_id = ? 
-												  AND class_id = ? 
-												  AND subject_id = ?";
-									$check_stmt = $this->db->prepare($check_query);
-									$check_stmt->bind_param("iiii", 
-										$academic_id,
-										$faculty_row['id'],
-										$student['class_id'],
-										$subject['id']
-									);
-									$check_stmt->execute();
-									$result = $check_stmt->get_result();
+				// Process each faculty assignment
+				while ($assignment = $assignments->fetch_assoc()) {
+					// Verify the subject department matches the class department
+					$subject_query = "SELECT department FROM subject_list WHERE id = ? AND department = ?";
+					$subject_stmt = $this->db->prepare($subject_query);
+					$subject_stmt->bind_param("is", $assignment['subject_id'], $assignment['class_department']);
+					$subject_stmt->execute();
+					$subject_result = $subject_stmt->get_result();
 		
-									// Only insert if this combination doesn't exist
-									if($result->num_rows === 0) {
-										$insert_stmt->bind_param("iiii", 
-											$academic_id,
-											$faculty_row['id'],
-											$student['class_id'],
-											$subject['id']
-										);
+					if ($subject_result->num_rows > 0) {
+						// Check if this restriction already exists
+						$check_query = "SELECT id FROM restriction_list 
+									  WHERE academic_id = ? 
+									  AND faculty_id = ? 
+									  AND class_id = ? 
+									  AND subject_id = ?";
+						
+						$check_stmt = $this->db->prepare($check_query);
+						$check_stmt->bind_param("iiii",
+							$academic_id,
+							$assignment['faculty_id'],
+							$assignment['class_id'],
+							$assignment['subject_id']
+						);
+						$check_stmt->execute();
+						$result = $check_stmt->get_result();
 		
-										if(!$insert_stmt->execute()) {
-											throw new Exception("Failed to insert restriction");
-										}
-										$restrictions_added = true;
-									}
-								}
+						// Only insert if this combination doesn't exist
+						if ($result->num_rows === 0) {
+							$insert_stmt->bind_param("iiii",
+								$academic_id,
+								$assignment['faculty_id'],
+								$assignment['class_id'],
+								$assignment['subject_id']
+							);
+		
+							if (!$insert_stmt->execute()) {
+								throw new Exception("Failed to insert restriction");
 							}
+							$restrictions_added = true;
 						}
 					}
 				}
@@ -2318,7 +2597,6 @@ private function send_verification_email($email, $verification_code) {
 				return 2; // Error
 			}
 		}
-		
 		function load_comments() {
 			try {
 				// Validate and sanitize input parameters
@@ -2480,16 +2758,3217 @@ private function send_verification_email($email, $verification_code) {
 				]);
 			}
 		}
+
+
+		public function get_department_list() {
+			$query = "SELECT DISTINCT department FROM subject_list ORDER BY department ASC";
+			$result = $this->db->query($query);
+		
+			$data = array();
+			while($row = $result->fetch_assoc()) {
+				$data[] = $row['department'];
+			}
+		
+			return json_encode($data);
+		}
+		
+
+
+		public function check_assignment() {
+			if (!isset($_POST['faculty_id']) || !isset($_POST['class_id']) || !isset($_POST['subject_id'])) {
+				return json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+			}
+		
+			try {
+				// Sanitize and validate inputs
+				$faculty_id = filter_var($_POST['faculty_id'], FILTER_VALIDATE_INT);
+				$class_id = filter_var($_POST['class_id'], FILTER_VALIDATE_INT);
+				$subject_id = filter_var($_POST['subject_id'], FILTER_VALIDATE_INT);
+		
+				if ($faculty_id === false || $class_id === false || $subject_id === false) {
+					return json_encode(['status' => 'error', 'message' => 'Invalid input values']);
+				}
+		
+				// Get current academic year
+				$ay_query = "SELECT id FROM academic_list WHERE is_default = 1 LIMIT 1";
+				$ay_result = $this->db->query($ay_query);
+				if ($ay_result->num_rows === 0) {
+					return json_encode(['status' => 'error', 'message' => 'No active academic year found']);
+				}
+				$academic_year_id = $ay_result->fetch_assoc()['id'];
+		
+				// Check if faculty exists
+				$faculty_check = $this->db->prepare("SELECT id FROM faculty_list WHERE id = ?");
+				$faculty_check->bind_param("i", $faculty_id);
+				$faculty_check->execute();
+				if ($faculty_check->get_result()->num_rows === 0) {
+					return json_encode(['status' => 'error', 'message' => 'Faculty not found']);
+				}
+		
+				// Check if class exists
+				$class_check = $this->db->prepare("SELECT id FROM class_list WHERE id = ?");
+				$class_check->bind_param("i", $class_id);
+				$class_check->execute();
+				if ($class_check->get_result()->num_rows === 0) {
+					return json_encode(['status' => 'error', 'message' => 'Class not found']);
+				}
+		
+				// Check if subject exists
+				$subject_check = $this->db->prepare("SELECT id FROM subject_list WHERE id = ?");
+				$subject_check->bind_param("i", $subject_id);
+				$subject_check->execute();
+				if ($subject_check->get_result()->num_rows === 0) {
+					return json_encode(['status' => 'error', 'message' => 'Subject not found']);
+				}
+		
+				// Check if assignment already exists for current semester
+				$stmt = $this->db->prepare("SELECT id FROM faculty_assignments 
+										   WHERE faculty_id = ? AND class_id = ? AND subject_id = ? 
+										   AND academic_year_id = ? AND is_active = 1");
+				$stmt->bind_param("iiii", $faculty_id, $class_id, $subject_id, $academic_year_id);
+				$stmt->execute();
+				$result = $stmt->get_result();
+		
+				if ($result->num_rows > 0) {
+					return json_encode(['status' => 'exists', 'message' => 'Assignment already exists']);
+				}
+		
+				return json_encode(['status' => 'success', 'message' => 'Assignment available']);
+		
+			} catch (Exception $e) {
+				error_log("Error in check_assignment: " . $e->getMessage());
+				return json_encode(['status' => 'error', 'message' => 'Database error occurred']);
+			}
+		}
+	
+		public function save_assignment() {
+			if (!isset($_POST['faculty_id']) || !isset($_POST['class_id']) || !isset($_POST['subject_id'])) {
+				return json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+			}
+		
+			try {
+				// Sanitize and validate inputs
+				$faculty_id = filter_var($_POST['faculty_id'], FILTER_VALIDATE_INT);
+				$class_id = filter_var($_POST['class_id'], FILTER_VALIDATE_INT);
+				$subject_id = filter_var($_POST['subject_id'], FILTER_VALIDATE_INT);
+		
+				if ($faculty_id === false || $class_id === false || $subject_id === false) {
+					return json_encode(['status' => 'error', 'message' => 'Invalid input values']);
+				}
+		
+				// Get current academic year and semester from academic_list
+				$academic_query = "SELECT id, semester FROM academic_list 
+								  WHERE is_default = 1 AND status = 1 
+								  LIMIT 1";
+				$academic_result = $this->db->query($academic_query);
+				
+				if ($academic_result->num_rows === 0) {
+					return json_encode(['status' => 'error', 
+									  'message' => 'No active academic year and semester found']);
+				}
+				
+				$academic_data = $academic_result->fetch_assoc();
+				$academic_year_id = $academic_data['id'];
+				$current_semester = $academic_data['semester'];
+		
+				// Check if assignment already exists
+				$stmt = $this->db->prepare("SELECT id FROM faculty_assignments 
+										   WHERE faculty_id = ? AND class_id = ? AND subject_id = ? 
+										   AND academic_year_id = ? AND semester = ? AND is_active = 1");
+				$stmt->bind_param("iiiii", 
+								 $faculty_id, $class_id, $subject_id, 
+								 $academic_year_id, $current_semester);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				
+				if ($result->num_rows > 0) {
+					return json_encode(['status' => 'exists', 
+									  'message' => 'Assignment already exists for this semester']);
+				}
+		
+				// Insert new assignment
+				$user_id = $_SESSION['admin_id'] ?? 1; // Get the current admin user ID from session
+				$insert_stmt = $this->db->prepare(
+					"INSERT INTO faculty_assignments (
+						faculty_id, class_id, subject_id, academic_year_id, 
+						semester, is_active, assigned_by, assigned_at
+					) VALUES (?, ?, ?, ?, ?, 1, ?, NOW())"
+				);
+				$insert_stmt->bind_param("iiiiii", 
+					$faculty_id, $class_id, $subject_id, 
+					$academic_year_id, $current_semester, $user_id
+				);
+				
+				if ($insert_stmt->execute()) {
+					return json_encode(['status' => 'success', 
+									  'message' => 'Assignment saved successfully']);
+				} else {
+					return json_encode(['status' => 'error', 
+									  'message' => 'Failed to save assignment']);
+				}
+		
+			} catch (Exception $e) {
+				error_log("Error in save_assignment: " . $e->getMessage());
+				return json_encode(['status' => 'error', 
+								  'message' => 'Database error occurred']);
+			}
+		}
+	
+		public function load_assignments() {
+			$query = "SELECT r.id, 
+							 CONCAT(f.firstname, ' ', f.lastname) as faculty_name,
+							 CONCAT(c.level, ' - ', c.section, ' (', c.curriculum, ')') as class_name,
+							 CONCAT(s.code, ' - ', s.subject) as subject_name
+					  FROM restriction_list r
+					  LEFT JOIN faculty_list f ON f.id = r.faculty_id
+					  LEFT JOIN class_list c ON c.id = r.class_id
+					  LEFT JOIN subject_list s ON s.id = r.subject_id
+					  ORDER BY faculty_name ASC";
+			
+			$result = $this->db->query($query);
+			$output = "";
+			
+			while($row = $result->fetch_assoc()) {
+				$output .= "
+					<tr>
+						<td>{$row['faculty_name']}</td>
+						<td>{$row['class_name']}</td>
+						<td>{$row['subject_name']}</td>
+						<td>
+							<button class='btn btn-danger btn-sm delete-assignment' data-id='{$row['id']}'>
+								Delete
+							</button>
+						</td>
+					</tr>
+				";
+			}
+			
+			return $output;
+		}
+	
+		public function delete_assignment() {
+			extract($_POST);
+			$id = intval($id);
+			
+			$stmt = $this->db->prepare("DELETE FROM faculty_assignments WHERE id = ?");
+			$stmt->bind_param("i", $id);
+			
+			if($stmt->execute()) {
+				return 1;
+			}
+			return 0;
+		}
+
+
+		
+
+		public function load_assignments_grid() {
+			try {
+				// Get current academic year
+				$ay_query = "SELECT id FROM academic_list WHERE is_default =1 LIMIT 1";
+				$ay_result = $this->db->query($ay_query);
+				if ($ay_result->num_rows === 0) {
+					throw new Exception('No active academic year found');
+				}
+				$academic_year_id = $ay_result->fetch_assoc()['id'];
+				
+				// Base query to get class-subject combinations
+				$query = "SELECT DISTINCT 
+					c.id as class_id, 
+					s.id as subject_id,
+					c.department as class_department,
+					s.department as subject_department,
+					CONCAT(c.level, ' - ', c.section) as class_name,
+					CONCAT(s.code, ' - ', s.subject) as subject_name,
+					fa.id as assignment_id,
+					f.id as faculty_id,
+					CONCAT(f.firstname, ' ', f.lastname) as faculty_name
+				FROM class_list c 
+				INNER JOIN subject_list s ON c.department = s.department
+				LEFT JOIN faculty_assignments fa ON fa.class_id = c.id 
+					AND fa.subject_id = s.id 
+					AND fa.academic_year_id = ? 
+					AND fa.is_active = 1
+				LEFT JOIN faculty_list f ON f.id = fa.faculty_id
+				WHERE 1=1";
+				
+				$params = [$academic_year_id];
+				$types = "i";
+				
+				// Add filters
+				if (!empty($_POST['department'])) {
+					$query .= " AND c.department = ?";
+					$params[] = $_POST['department'];
+					$types .= "s";
+				}
+				
+				if (!empty($_POST['class_id'])) {
+					$query .= " AND c.id = ?";
+					$params[] = $_POST['class_id'];
+					$types .= "i";
+				}
+				
+				if (!empty($_POST['subject_id'])) {
+					$query .= " AND s.id = ?";
+					$params[] = $_POST['subject_id'];
+					$types .= "i";
+				}
+				
+				$query .= " ORDER BY c.department ASC, c.level ASC, s.code ASC";
+				
+				// Prepare and execute the query
+				$stmt = $this->db->prepare($query);
+				$stmt->bind_param($types, ...$params);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				
+				// Generate output HTML
+				$output = "";
+				$current_department = "";
+				
+				while ($row = $result->fetch_assoc()) {
+					// Add department header if it's a new department
+					if ($current_department !== $row['class_department']) {
+						if ($current_department !== "") {
+							$output .= "</div></div>"; // Close previous department section
+						}
+						$current_department = $row['class_department'];
+						$output .= "<div class='department-assignments mb-4'>";
+						$output .= "<h4 class='department-assignments-header'>{$current_department}</h4>";
+						$output .= "<div class='assignment-grid'>";
+					}
+					
+					// Generate assignment card
+					$output .= "<div class='assignment-card'>";
+					$output .= "<div class='card-body p-3'>";
+					$output .= "<h5 class='card-title'>{$row['class_name']}</h5>";
+					$output .= "<h6 class='card-subtitle mb-2 text-muted'>{$row['subject_name']}</h6>";
+					
+					// Assignment dropzone
+					$output .= "<div class='assignment-dropzone mt-3' 
+									data-class='{$row['class_id']}' 
+									data-subject='{$row['subject_id']}'>";
+					
+					// Show assigned faculty if exists
+					if (!empty($row['faculty_id'])) {
+						$output .= "<div class='assigned-faculty'>";
+						$output .= "<i class='fas fa-user-check text-success me-2'></i>";
+						$output .= "<span>{$row['faculty_name']}</span>";
+						$output .= "<button class='btn btn-sm btn-danger float-end delete-assignment' 
+									data-id='{$row['assignment_id']}'>";
+						$output .= "<i class='fas fa-times'></i></button>";
+						$output .= "</div>";
+					} else {
+						$output .= "<div class='text-center text-muted'>";
+						$output .= "<i class='fas fa-plus-circle'></i> Drop faculty here";
+						$output .= "</div>";
+					}
+					
+					$output .= "</div>"; // Close dropzone
+					$output .= "</div>"; // Close card-body
+					$output .= "</div>"; // Close assignment-card
+				}
+				
+				// Close last department section if exists
+				if ($current_department !== "") {
+					$output .= "</div></div>";
+				}
+				
+				// Return output or empty state
+				if (empty($output)) {
+					$department = $_POST['department'] ?? 'No Department Selected';
+					$output = "<div class='empty-department'>
+								<i class='fas fa-info-circle mb-2'></i><br>
+								No assignments found for {$department}
+							  </div>";
+				}
+				
+				echo $output;
+				
+			} catch (Exception $e) {
+				error_log("Error in load_assignments_grid: " . $e->getMessage());
+				echo "<div class='alert alert-danger'>
+						<i class='fas fa-exclamation-triangle me-2'></i>
+						Error loading assignments. Please try again.
+					  </div>";
+			}
+		}
+
+		public function get_departments() {
+			try {
+				$query = "SELECT DISTINCT department FROM faculty_list WHERE department IS NOT NULL ORDER BY department ASC";
+				$result = $this->db->query($query);
+				$departments = [];
+				
+				while($row = $result->fetch_assoc()) {
+					$departments[] = $row['department'];
+				}
+				
+				return json_encode(['status' => 'success', 'departments' => $departments]);
+			} catch (Exception $e) {
+				return json_encode(['status' => 'error', 'message' => 'Error fetching departments']);
+			}
+		}
+		private function get_empty_department_html($department) {
+            return "
+                <div class='empty-department'>
+                    <p>No assignments for this department</p>
+                    <div class='assignment-dropzone' 
+                        data-department='{$department}'
+                        style='min-height: 100px; border: 2px dashed #dee2e6; border-radius: 4px; margin-top: 10px;'>
+                        <div class='text-center py-3'>
+                            <i class='fas fa-plus-circle mb-2'></i><br>
+                            Drag faculty here to assign
+                        </div>
+                    </div>
+                </div>";
+        }
+
+
+
+
+
+
+
+
+		//AssignSubjectClassess
+
+		public function check_assignment_faculty() {
+			extract($_POST);
+			
+			if(!isset($faculty_id) || !isset($class_id) || !isset($subject_id)) {
+				return json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+			}
+		
+			// Get current academic year and semester
+			$academic_year_query = $this->db->query("SELECT id FROM academic_list WHERE is_default = 1 LIMIT 1");
+			$academic_year = $academic_year_query->fetch_assoc();
+			$academic_year_id = $academic_year['id'];
+			
+			// Assuming semester is stored in a session or configuration
+			$semester = isset($_SESSION['semester']) ? $_SESSION['semester'] : 1;
+		
+			// Check if the class-subject combination already has an assigned faculty
+			$stmt = $this->db->prepare("SELECT fa.*, CONCAT(f.firstname, ' ', f.lastname) as faculty_name 
+									   FROM faculty_assignments fa 
+									   LEFT JOIN faculty_list f ON fa.faculty_id = f.id 
+									   WHERE fa.class_id = ? 
+									   AND fa.subject_id = ? 
+									   AND fa.academic_year_id = ? 
+									   AND fa.semester = ? 
+									   AND fa.is_active = 1");
+			
+			$stmt->bind_param("iiii", $class_id, $subject_id, $academic_year_id, $semester);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			if($result->num_rows > 0) {
+				$existing = $result->fetch_assoc();
+				return json_encode([
+					'status' => 'error', 
+					'message' => "This class and subject is already assigned to {$existing['faculty_name']}"
+				]);
+			}
+		
+			// Check if faculty is already assigned to this class and subject
+			$stmt = $this->db->prepare("SELECT id FROM faculty_assignments 
+									   WHERE faculty_id = ? 
+									   AND class_id = ? 
+									   AND subject_id = ? 
+									   AND academic_year_id = ? 
+									   AND semester = ? 
+									   AND is_active = 1");
+			
+			$stmt->bind_param("iiiii", $faculty_id, $class_id, $subject_id, $academic_year_id, $semester);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			if($result->num_rows > 0) {
+				return json_encode([
+					'status' => 'error', 
+					'message' => 'You have already assigned this faculty to this class and subject'
+				]);
+			}
+			
+			return json_encode(['status' => 'success']);
+		}
+		public function save_assignment_faculty() {
+			try {
+				extract($_POST);
+				
+				if(!isset($faculty_id) || !isset($class_id) || !isset($subject_id)) {
+					return json_encode([
+						'status' => 'error',
+						'message' => 'Missing required fields'
+					]);
+				}
+			
+				// Get current academic year and its semester
+				$academic_year_query = $this->db->query("
+					SELECT id, semester 
+					FROM academic_list 
+					WHERE is_default = 1 
+					LIMIT 1
+				");
+				
+				if(!$academic_year_query) {
+					throw new Exception("Failed to get academic year");
+				}
+				
+				$academic_year = $academic_year_query->fetch_assoc();
+				if(!$academic_year) {
+					throw new Exception("No default academic year set");
+				}
+				
+				$academic_year_id = $academic_year['id'];
+				$semester = $academic_year['semester']; // Get semester from default academic year
+				$assigned_by = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
+		
+				// Rest of your existing code...
+				
+				$stmt = $this->db->prepare("
+					INSERT INTO faculty_assignments (
+						faculty_id, class_id, subject_id, 
+						academic_year_id, semester, assigned_by
+					) VALUES (?, ?, ?, ?, ?, ?)
+				");
+				
+				$stmt->bind_param("iiiiii", 
+					$faculty_id, 
+					$class_id, 
+					$subject_id, 
+					$academic_year_id, 
+					$semester, 
+					$assigned_by
+				);
+				
+				if($stmt->execute()) {
+					return json_encode([
+						'status' => 'success',
+						'message' => 'Assignment saved successfully'
+					]);
+				} else {
+					throw new Exception("Failed to save assignment");
+				}
+				
+			} catch(Exception $e) {
+				error_log("Error saving faculty assignment: " . $e->getMessage());
+				return json_encode([
+					'status' => 'error',
+					'message' => 'Failed to save assignment: ' . $e->getMessage()
+				]);
+			}
+		}
+	
+		public function load_assignments_faculty() {
+			// Get current academic year
+			$academic_year_query = $this->db->query("SELECT id FROM academic_list WHERE is_default = 1 LIMIT1");
+			$academic_year = $academic_year_query->fetch_assoc();
+			$academic_year_id = $academic_year['id'];
+			
+			// Get current semester
+			$semester = isset($_SESSION['semester']) ? $_SESSION['semester'] : 1;
+		
+			$query = "SELECT fa.*, 
+					 CONCAT(f.firstname, ' ', f.lastname) as faculty_name,
+					 CONCAT(c.level, ' - ', c.section) as class_name,
+					 CONCAT(s.code, ' - ', s.subject) as subject_name
+					 FROM faculty_assignments fa
+					 LEFT JOIN faculty_list f ON fa.faculty_id = f.id
+					 LEFT JOIN class_list c ON fa.class_id = c.id
+					 LEFT JOIN subject_list s ON fa.subject_id = s.id
+					 WHERE fa.academic_year_id = ? AND fa.semester = ? AND fa.is_active = 1
+					 ORDER BY faculty_name ASC";
+			
+			$stmt = $this->db->prepare($query);
+			$stmt->bind_param("ii", $academic_year_id, $semester);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$output = "";
+			while($row = $result->fetch_assoc()) {
+				$output .= "
+					<tr>
+						<td>{$row['faculty_name']}</td>
+						<td>{$row['class_name']}</td>
+						<td>{$row['subject_name']}</td>
+						<td>
+							<button class='btn btn-danger btn-sm delete-assignment' data-id='{$row['id']}'>
+								<i class='fas fa-trash'></i>
+							</button>
+						</td>
+					</tr>
+				";
+			}
+			
+			return $output;
+		}
+	
+		public function delete_assignment_faculty() {
+			extract($_POST);
+			
+			if(!isset($id)) {
+				return 0;
+			}
+			
+			$stmt = $this->db->prepare("UPDATE faculty_assignments SET is_active = 0 WHERE id = ?");
+			$stmt->bind_param("i", $id);
+			
+			$delete = $stmt->execute();
+			
+			if($delete) {
+				return 1;
+			}
+			
+			return 0;
+		}
+
+		public function get_assignment_faculty() {
+			extract($_POST);
+			
+			if(!isset($id)) {
+				return json_encode(['status' => 'error', 'message' => 'Missing assignment ID']);
+			}
+			
+			$stmt = $this->db->prepare("SELECT * FROM faculty_assignments WHERE id = ? AND is_active = 1");
+			$stmt->bind_param("i", $id);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			if($result->num_rows > 0) {
+				$row = $result->fetch_assoc();
+				return json_encode(['status' => 'success', 'data' => $row]);
+			}
+			
+			return json_encode(['status' => 'error', 'message' => 'Assignment not found']);
+		}
+		
+		public function update_assignment_faculty() {
+			extract($_POST);
+			
+			if(!isset($id) || !isset($faculty_id) || !isset($class_id) || !isset($subject_id)) {
+				return json_encode(['status' => 'error', 'message' => 'Missing required fields']);
+			}
+		
+			// Get current academic year
+			$academic_year_query = $this->db->query("SELECT id FROM academic_list WHERE is_default = 1 LIMIT1");
+			$academic_year = $academic_year_query->fetch_assoc();
+			$academic_year_id = $academic_year['id'];
+			
+			// Get current semester
+			$semester = isset($_SESSION['semester']) ? $_SESSION['semester'] : 1;
+		
+			// Check if the new assignment would create a duplicate
+			$stmt = $this->db->prepare("SELECT id FROM faculty_assignments 
+									   WHERE faculty_id = ? AND class_id = ? AND subject_id = ? 
+									   AND academic_year_id = ? AND semester = ? AND is_active = 1 
+									   AND id != ?");
+			
+			$stmt->bind_param("iiiiii", $faculty_id, $class_id, $subject_id, $academic_year_id, $semester, $id);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			if($result->num_rows > 0) {
+				return json_encode(['status' => 'error', 'message' => 'This assignment already exists']);
+			}
+		
+			// Update the assignment
+			$stmt = $this->db->prepare("UPDATE faculty_assignments 
+									   SET faculty_id = ?, class_id = ?, subject_id = ? 
+									   WHERE id = ? AND is_active =1");
+			
+			$stmt->bind_param("iiii", $faculty_id, $class_id, $subject_id, $id);
+			$save = $stmt->execute();
+			
+			if($save) {
+				return json_encode(['status' => 'success']);
+			}
+			
+			return json_encode(['status' => 'error', 'message' => 'Failed to update assignment']);
+		}
+
+
+
+		//November 12, 2024
+
+		public function get_departments_faculty() {
+			$query = "SELECT * FROM department_list ORDER BY name ASC";
+			$result = $this->db->query($query);
+			$departments = array();
+			
+			while($row = $result->fetch_assoc()) {
+				$departments[] = $row;
+			}
+			
+			return json_encode($departments);
+		}
+		
+		public function get_faculty_by_department() {
+			extract($_POST);
+			
+			if(!isset($department)) {
+				return "";
+			}
+			
+			$query = "SELECT id, CONCAT(firstname, ' ', lastname) as name 
+					  FROM faculty_list 
+					  WHERE department = ? 
+					  ORDER BY lastname ASC";
+			
+			$stmt = $this->db->prepare($query);
+			$stmt->bind_param("s", $department);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$output = "";
+			while($row = $result->fetch_assoc()) {
+				$output .= "<option value='{$row['id']}'>{$row['name']}</option>";
+			}
+			
+			return $output;
+		}
+		
+		public function get_classes_by_department() {
+			extract($_POST);
+			
+			if(!isset($department)) {
+				return "";
+			}
+			
+			$query = "SELECT id, CONCAT(level, ' - ', section, ' (', curriculum, ')') as class_name 
+					  FROM class_list 
+					  WHERE department = ? 
+					  ORDER BY level ASC";
+			
+			$stmt = $this->db->prepare($query);
+			$stmt->bind_param("s", $department);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$output = "";
+			while($row = $result->fetch_assoc()) {
+				$output .= "<option value='{$row['id']}'>{$row['class_name']}</option>";
+			}
+			
+			return $output;
+		}
+		
+		public function get_subjects_by_department() {
+			extract($_POST);
+			
+			if(!isset($department)) {
+				return "";
+			}
+			
+			$query = "SELECT id, CONCAT(code, ' - ', subject) as subject_name 
+					  FROM subject_list 
+					  WHERE department = ? 
+					  ORDER BY subject ASC";
+			
+			$stmt = $this->db->prepare($query);
+			$stmt->bind_param("s", $department);
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$output = "";
+			while($row = $result->fetch_assoc()) {
+				$output .= "<option value='{$row['id']}'>{$row['subject_name']}</option>";
+			}
+			
+			return $output;
+		}
+		
+		// Modified load_assignments_faculty function to handle department filtering
+		public function load_assignments_faculties() {
+			extract($_POST);
+			
+			// Get current academic year
+			$academic_year_query = $this->db->query("SELECT id FROM academic_list WHERE is_default = 1 LIMIT 1");
+			$academic_year = $academic_year_query->fetch_assoc();
+			$academic_year_id = $academic_year['id'];
+			
+			// Base query
+			$sql = "SELECT 
+				fa.id,
+				f.firstname as faculty_name,
+				f.lastname as faculty_lastname,
+				c.curriculum as class_name,
+				c.level,
+				c.section,
+				s.subject as subject_name,
+				c.department
+			FROM faculty_assignments fa
+			JOIN faculty_list f ON fa.faculty_id = f.id
+			JOIN class_list c ON fa.class_id = c.id
+			JOIN subject_list s ON fa.subject_id = s.id
+			WHERE fa.academic_year_id = ? AND fa.is_active = 1";
+			
+			// Add department filter if specified
+			if (isset($department) && $department != 'all') {
+				$sql .= " AND c.department = ?";
+			}
+			
+			$stmt = $this->db->prepare($sql);
+			
+			if (isset($department) && $department != 'all') {
+				$stmt->bind_param("is", $academic_year_id, $department);
+			} else {
+				$stmt->bind_param("i", $academic_year_id);
+			}
+			
+			$stmt->execute();
+			$result = $stmt->get_result();
+			
+			$output = "";
+			while ($row = $result->fetch_assoc()) {
+				$output .= "
+					<tr>
+						<td>{$row['faculty_name']} {$row['faculty_lastname']}</td>
+						<td>{$row['class_name']} {$row['level']}-{$row['section']}</td>
+						<td>{$row['subject_name']}</td>
+						<td>{$row['department']}</td>
+						<td>
+							<button class='btn btn-danger btn-sm delete-assignment' data-id='{$row['id']}'>
+								<i class='fas fa-trash'></i>
+							</button>
+						</td>
+					</tr>
+				";
+			}
+			
+			$stmt->close();
+			return $output;
+		}
+
+		public function get_dashboard_stats() {
+			try {
+				// First check if there's a default academic year set
+				$default_academic_query = $this->db->query("
+					SELECT id, year, semester 
+					FROM academic_list 
+					WHERE is_default = 1 
+					LIMIT 1
+				");
+				
+				if ($default_academic_query->num_rows == 0) {
+					return json_encode([
+						'status' => 'warning',
+						'message' => 'No default academic year set',
+						'totalAssignments' => 0,
+						'totalFaculty' => 0,
+						'departmentStats' => [],
+						'recentAssignments' => []
+					]);
+				}
+		
+				$default_academic = $default_academic_query->fetch_assoc();
+				$academic_year_id = $default_academic['id'];
+				$semester = $default_academic['semester'];
+		
+				// Get total active assignments for default academic year and semester
+				$assignments_query = $this->db->prepare("
+					SELECT COUNT(*) as total 
+					FROM faculty_assignments 
+					WHERE academic_year_id = ? 
+					AND semester = ? 
+					AND is_active = 1
+				");
+				$assignments_query->bind_param("ii", $academic_year_id, $semester);
+				$assignments_query->execute();
+				$total_assignments = $assignments_query->get_result()->fetch_assoc()['total'];
+		
+				// Get total faculty count
+				$faculty_query = $this->db->query("
+					SELECT COUNT(*) as total 
+					FROM faculty_list
+				");
+				$total_faculty = $faculty_query->fetch_assoc()['total'];
+		
+				// Get assignments by department for default academic year and semester
+				$dept_query = $this->db->prepare("
+					SELECT 
+						f.department,
+						COUNT(DISTINCT fa.id) as total_assignments,
+						COUNT(DISTINCT fa.faculty_id) as total_faculty
+					FROM faculty_list f
+					LEFT JOIN faculty_assignments fa ON f.id = fa.faculty_id
+					AND fa.academic_year_id = ? 
+					AND fa.semester = ?
+					AND fa.is_active = 1
+					GROUP BY f.department
+					HAVING f.department != ''
+					ORDER BY f.department ASC
+				");
+				$dept_query->bind_param("ii", $academic_year_id, $semester);
+				$dept_query->execute();
+				$dept_result = $dept_query->get_result();
+		
+				$department_stats = array();
+				while($row = $dept_result->fetch_assoc()) {
+					$department_stats[$row['department']] = [
+						'assignments' => (int)$row['total_assignments'],
+						'faculty' => (int)$row['total_faculty']
+					];
+				}
+		
+				// Get recent assignments
+				$recent_query = $this->db->prepare("
+					SELECT 
+						fa.id,
+						f.firstname,
+						f.lastname,
+						f.department,
+						fa.assigned_at,
+						al.year as academic_year
+					FROM faculty_assignments fa
+					JOIN faculty_list f ON fa.faculty_id = f.id
+					JOIN academic_list al ON fa.academic_year_id = al.id
+					WHERE fa.academic_year_id = ? 
+					AND fa.semester = ?
+					AND fa.is_active = 1
+					ORDER BY fa.assigned_at DESC
+					LIMIT 5
+				");
+				$recent_query->bind_param("ii", $academic_year_id, $semester);
+				$recent_query->execute();
+				$recent_result = $recent_query->get_result();
+				
+				$recent_assignments = array();
+				while($row = $recent_result->fetch_assoc()) {
+					$recent_assignments[] = [
+						'id' => $row['id'],
+						'faculty_name' => $row['firstname'] . ' ' . $row['lastname'],
+						'department' => $row['department'],
+						'assigned_at' => date('M d, Y', strtotime($row['assigned_at'])),
+						'academic_year' => $row['academic_year']
+					];
+				}
+		
+				return json_encode([
+					'status' => 'success',
+					'academicYear' => $default_academic['year'],
+					'semester' => $semester,
+					'totalAssignments' => $total_assignments,
+					'totalFaculty' => $total_faculty,
+					'departmentStats' => $department_stats,
+					'recentAssignments' => $recent_assignments
+				]);
+		
+			} catch(Exception $e) {
+				error_log("Error getting dashboard stats: " . $e->getMessage());
+				return json_encode([
+					'status' => 'error',
+					'message' => 'Failed to fetch dashboard statistics'
+				]);
+			}
+		}
+
+//Cot Dashboard
+public function get_dashboard_stats_cot() {
+    try {
+        // First check if there's a default academic year set
+        $default_academic_query = $this->db->query("
+            SELECT id, year, semester 
+            FROM academic_list 
+            WHERE is_default = 1 
+            LIMIT 1
+        ");
+        
+        if ($default_academic_query->num_rows == 0) {
+            return json_encode([
+                'status' => 'warning',
+                'message' => 'No default academic year set',
+                'totalAssignments' => 0,
+                'totalFaculty' => 0,
+                'departmentStats' => [],
+                'recentAssignments' => []
+            ]);
+        }
+
+        $default_academic = $default_academic_query->fetch_assoc();
+        $academic_year_id = $default_academic['id'];
+        $semester = $default_academic['semester'];
+
+        // Get total active assignments for default academic year, semester, and COT
+        $assignments_query = $this->db->prepare("
+            SELECT COUNT(*) as total 
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ? 
+            AND fa.is_active = 1
+            AND f.department LIKE 'COT%'
+        ");
+        $assignments_query->bind_param("ii", $academic_year_id, $semester);
+        $assignments_query->execute();
+        $total_assignments = $assignments_query->get_result()->fetch_assoc()['total'];
+
+        // Get total faculty count for COT
+        $faculty_query = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM faculty_list
+            WHERE department LIKE 'COT%'
+        ");
+        $total_faculty = $faculty_query->fetch_assoc()['total'];
+
+        // Get assignments by department for default academic year, semester, and COT
+        $dept_query = $this->db->prepare("
+            SELECT 
+                f.department,
+                COUNT(DISTINCT fa.id) as total_assignments,
+                COUNT(DISTINCT fa.faculty_id) as total_faculty
+            FROM faculty_list f
+            LEFT JOIN faculty_assignments fa ON f.id = fa.faculty_id
+            AND fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            WHERE f.department LIKE 'COT%'
+            GROUP BY f.department
+            ORDER BY f.department ASC
+        ");
+        $dept_query->bind_param("ii", $academic_year_id, $semester);
+        $dept_query->execute();
+        $dept_result = $dept_query->get_result();
+
+        $department_stats = array();
+        while($row = $dept_result->fetch_assoc()) {
+            $department_stats[$row['department']] = [
+                'assignments' => (int)$row['total_assignments'],
+                'faculty' => (int)$row['total_faculty']
+            ];
+        }
+
+        // Get recent assignments for COT
+        $recent_query = $this->db->prepare("
+            SELECT 
+                fa.id,
+                f.firstname,
+                f.lastname,
+                f.department,
+                fa.assigned_at,
+                al.year as academic_year
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            JOIN academic_list al ON fa.academic_year_id = al.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            AND f.department LIKE 'COT%'
+            ORDER BY fa.assigned_at DESC
+            LIMIT 5
+        ");
+        $recent_query->bind_param("ii", $academic_year_id, $semester);
+        $recent_query->execute();
+        $recent_result = $recent_query->get_result();
+        
+        $recent_assignments = array();
+        while($row = $recent_result->fetch_assoc()) {
+            $recent_assignments[] = [
+                'id' => $row['id'],
+                'faculty_name' => $row['firstname'] . ' ' . $row['lastname'],
+                'department' => $row['department'],
+                'assigned_at' => date('M d, Y', strtotime($row['assigned_at'])),
+                'academic_year' => $row['academic_year']
+            ];
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'academicYear' => $default_academic['year'],
+            'semester' => $semester,
+            'totalAssignments' => $total_assignments,
+            'totalFaculty' => $total_faculty,
+            'departmentStats' => $department_stats,
+            'recentAssignments' => $recent_assignments
+        ]);
+
+    } catch(Exception $e) {
+        error_log("Error getting COT dashboard stats: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Failed to fetch COT dashboard statistics'
+        ]);
+    }
+}
+
+//COE Statistics
+
+public function get_dashboard_stats_coe() {
+    try {
+        // First check if there's a default academic year set
+        $default_academic_query = $this->db->query("
+            SELECT id, year, semester 
+            FROM academic_list 
+            WHERE is_default = 1 
+            LIMIT 1
+        ");
+        
+        if ($default_academic_query->num_rows == 0) {
+            return json_encode([
+                'status' => 'warning',
+                'message' => 'No default academic year set',
+                'totalAssignments' => 0,
+                'totalFaculty' => 0,
+                'departmentStats' => [],
+                'recentAssignments' => []
+            ]);
+        }
+
+        $default_academic = $default_academic_query->fetch_assoc();
+        $academic_year_id = $default_academic['id'];
+        $semester = $default_academic['semester'];
+
+        // Get total active assignments for default academic year, semester, and COT
+        $assignments_query = $this->db->prepare("
+            SELECT COUNT(*) as total 
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ? 
+            AND fa.is_active = 1
+            AND f.department LIKE 'COE%'
+        ");
+        $assignments_query->bind_param("ii", $academic_year_id, $semester);
+        $assignments_query->execute();
+        $total_assignments = $assignments_query->get_result()->fetch_assoc()['total'];
+
+        // Get total faculty count for COT
+        $faculty_query = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM faculty_list
+            WHERE department LIKE 'COE%'
+        ");
+        $total_faculty = $faculty_query->fetch_assoc()['total'];
+
+        // Get assignments by department for default academic year, semester, and COT
+        $dept_query = $this->db->prepare("
+            SELECT 
+                f.department,
+                COUNT(DISTINCT fa.id) as total_assignments,
+                COUNT(DISTINCT fa.faculty_id) as total_faculty
+            FROM faculty_list f
+            LEFT JOIN faculty_assignments fa ON f.id = fa.faculty_id
+            AND fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            WHERE f.department LIKE 'COE%'
+            GROUP BY f.department
+            ORDER BY f.department ASC
+        ");
+        $dept_query->bind_param("ii", $academic_year_id, $semester);
+        $dept_query->execute();
+        $dept_result = $dept_query->get_result();
+
+        $department_stats = array();
+        while($row = $dept_result->fetch_assoc()) {
+            $department_stats[$row['department']] = [
+                'assignments' => (int)$row['total_assignments'],
+                'faculty' => (int)$row['total_faculty']
+            ];
+        }
+
+        // Get recent assignments for COT
+        $recent_query = $this->db->prepare("
+            SELECT 
+                fa.id,
+                f.firstname,
+                f.lastname,
+                f.department,
+                fa.assigned_at,
+                al.year as academic_year
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            JOIN academic_list al ON fa.academic_year_id = al.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            AND f.department LIKE 'COE%'
+            ORDER BY fa.assigned_at DESC
+            LIMIT 5
+        ");
+        $recent_query->bind_param("ii", $academic_year_id, $semester);
+        $recent_query->execute();
+        $recent_result = $recent_query->get_result();
+        
+        $recent_assignments = array();
+        while($row = $recent_result->fetch_assoc()) {
+            $recent_assignments[] = [
+                'id' => $row['id'],
+                'faculty_name' => $row['firstname'] . ' ' . $row['lastname'],
+                'department' => $row['department'],
+                'assigned_at' => date('M d, Y', strtotime($row['assigned_at'])),
+                'academic_year' => $row['academic_year']
+            ];
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'academicYear' => $default_academic['year'],
+            'semester' => $semester,
+            'totalAssignments' => $total_assignments,
+            'totalFaculty' => $total_faculty,
+            'departmentStats' => $department_stats,
+            'recentAssignments' => $recent_assignments
+        ]);
+
+    } catch(Exception $e) {
+        error_log("Error getting COE dashboard stats: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Failed to fetch COE dashboard statistics'
+        ]);
+    }
+}
+
+//CME
+
+public function get_dashboard_stats_cme() {
+    try {
+        // First check if there's a default academic year set
+        $default_academic_query = $this->db->query("
+            SELECT id, year, semester 
+            FROM academic_list 
+            WHERE is_default = 1 
+            LIMIT 1
+        ");
+        
+        if ($default_academic_query->num_rows == 0) {
+            return json_encode([
+                'status' => 'warning',
+                'message' => 'No default academic year set',
+                'totalAssignments' => 0,
+                'totalFaculty' => 0,
+                'departmentStats' => [],
+                'recentAssignments' => []
+            ]);
+        }
+
+        $default_academic = $default_academic_query->fetch_assoc();
+        $academic_year_id = $default_academic['id'];
+        $semester = $default_academic['semester'];
+
+        // Get total active assignments for default academic year, semester, and COT
+        $assignments_query = $this->db->prepare("
+            SELECT COUNT(*) as total 
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ? 
+            AND fa.is_active = 1
+            AND f.department LIKE 'CME%'
+        ");
+        $assignments_query->bind_param("ii", $academic_year_id, $semester);
+        $assignments_query->execute();
+        $total_assignments = $assignments_query->get_result()->fetch_assoc()['total'];
+
+        // Get total faculty count for COT
+        $faculty_query = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM faculty_list
+            WHERE department LIKE 'CME%'
+        ");
+        $total_faculty = $faculty_query->fetch_assoc()['total'];
+
+        // Get assignments by department for default academic year, semester, and COT
+        $dept_query = $this->db->prepare("
+            SELECT 
+                f.department,
+                COUNT(DISTINCT fa.id) as total_assignments,
+                COUNT(DISTINCT fa.faculty_id) as total_faculty
+            FROM faculty_list f
+            LEFT JOIN faculty_assignments fa ON f.id = fa.faculty_id
+            AND fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            WHERE f.department LIKE 'CME%'
+            GROUP BY f.department
+            ORDER BY f.department ASC
+        ");
+        $dept_query->bind_param("ii", $academic_year_id, $semester);
+        $dept_query->execute();
+        $dept_result = $dept_query->get_result();
+
+        $department_stats = array();
+        while($row = $dept_result->fetch_assoc()) {
+            $department_stats[$row['department']] = [
+                'assignments' => (int)$row['total_assignments'],
+                'faculty' => (int)$row['total_faculty']
+            ];
+        }
+
+        // Get recent assignments for COT
+        $recent_query = $this->db->prepare("
+            SELECT 
+                fa.id,
+                f.firstname,
+                f.lastname,
+                f.department,
+                fa.assigned_at,
+                al.year as academic_year
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            JOIN academic_list al ON fa.academic_year_id = al.id
+            WHERE fa.academic_year_id = ? 
+            AND fa.semester = ?
+            AND fa.is_active = 1
+            AND f.department LIKE 'CME%'
+            ORDER BY fa.assigned_at DESC
+            LIMIT 5
+        ");
+        $recent_query->bind_param("ii", $academic_year_id, $semester);
+        $recent_query->execute();
+        $recent_result = $recent_query->get_result();
+        
+        $recent_assignments = array();
+        while($row = $recent_result->fetch_assoc()) {
+            $recent_assignments[] = [
+                'id' => $row['id'],
+                'faculty_name' => $row['firstname'] . ' ' . $row['lastname'],
+                'department' => $row['department'],
+                'assigned_at' => date('M d, Y', strtotime($row['assigned_at'])),
+                'academic_year' => $row['academic_year']
+            ];
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'academicYear' => $default_academic['year'],
+            'semester' => $semester,
+            'totalAssignments' => $total_assignments,
+            'totalFaculty' => $total_faculty,
+            'departmentStats' => $department_stats,
+            'recentAssignments' => $recent_assignments
+        ]);
+
+    } catch(Exception $e) {
+        error_log("Error getting CME dashboard stats: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Failed to fetch CME dashboard statistics'
+        ]);
+    }
+}
+
+
+//CEAS statistic/dashboard
+
+
+
+
+
+
+
+
+		//November 18 || Classroom.php
+
+	
+
+
+		public function add_student_to_class() {
+			// Validate and sanitize inputs
+			$school_id = filter_var($_POST['school_id'], FILTER_SANITIZE_STRING);
+			$class_id = filter_var($_POST['class_id'], FILTER_SANITIZE_STRING);
+			
+			if (!$school_id || !$class_id) {
+				return 0; // Invalid input
+			}
+			
+			// Use prepared statements for all queries
+			$stmt = $this->db->prepare("SELECT * FROM student_list WHERE school_id = ?");
+			$stmt->bind_param("s", $school_id);
+			$stmt->execute();
+			$check = $stmt->get_result();
+			
+			if($check->num_rows == 0) {
+				return 2; // Student not found
+			}
+			
+			$student = $check->fetch_array();
+			
+			// Check if student is already in the class
+			$stmt = $this->db->prepare("SELECT * FROM student_list WHERE id = ? AND class_id = ?");
+			$stmt->bind_param("ss", $student['id'], $class_id);
+			$stmt->execute();
+			$check_class = $stmt->get_result();
+			
+			if($check_class->num_rows > 0) {
+				return 3; // Student already in class
+			}
+			
+			// Update student's class
+			$stmt = $this->db->prepare("UPDATE student_list SET class_id = ? WHERE id = ?");
+			$stmt->bind_param("ss", $class_id, $student['id']);
+			$success = $stmt->execute();
+			
+			if($success) {
+				// Create notification for the faculty
+				$stmt = $this->db->prepare("SELECT faculty_id FROM faculty_assignments WHERE class_id = ? LIMIT 1");
+				$stmt->bind_param("s", $class_id);
+				$stmt->execute();
+				$faculty = $stmt->get_result()->fetch_array();
+				
+				if($faculty) {
+					$message = "New student {$student['firstname']} {$student['lastname']} has been added to your class.";
+					$stmt = $this->db->prepare("INSERT INTO notifications (faculty_id, message) VALUES (?, ?)");
+					$stmt->bind_param("ss", $faculty['faculty_id'], $message);
+					$stmt->execute();
+				}
+				
+				return 1; // Success
+			}
+			
+			return 0; // Error
+		}
+	
+		public function remove_student_from_class() {
+			// Validate and sanitize input
+			$student_id = filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT);
+			
+			if (!$student_id) {
+				return 0; // Invalid input
+			}
+			
+			// Use prepared statement to prevent SQL injection
+			$stmt = $this->db->prepare("
+				UPDATE student_list 
+				SET class_id = NULL 
+				WHERE id = ?
+			");
+			
+			$stmt->bind_param("i", $student_id);
+			$success = $stmt->execute();
+			
+			if ($success) {
+				// Get student and class details for notification
+				$stmt = $this->db->prepare("
+					SELECT s.firstname, s.lastname, c.id as class_id 
+					FROM student_list s 
+					LEFT JOIN class_list c ON s.class_id = c.id 
+					WHERE s.id = ?
+				");
+				$stmt->bind_param("i", $student_id);
+				$stmt->execute();
+				$result = $stmt->get_result();
+				$student = $result->fetch_array();
+				
+				if ($student && $student['class_id']) {
+					// Notify faculty about student removal
+					$stmt = $this->db->prepare("
+						SELECT DISTINCT faculty_id 
+						FROM faculty_assignments 
+						WHERE class_id = ?
+					");
+					$stmt->bind_param("i", $student['class_id']);
+					$stmt->execute();
+					$faculty_result = $stmt->get_result();
+					
+					while ($faculty = $faculty_result->fetch_array()) {
+						$message = "Student {$student['firstname']} {$student['lastname']} has been removed from your class.";
+						$stmt = $this->db->prepare("
+							INSERT INTO notifications (faculty_id, message) 
+							VALUES (?, ?)
+						");
+						$stmt->bind_param("is", $faculty['faculty_id'], $message);
+						$stmt->execute();
+					}
+				}
+				
+				return 1; // Success
+			}
+			
+			return 0; // Error
+		}
+		
+	
+		// Helper function to get current academic year
+		private function get_current_academic_year() {
+			$stmt = $this->db->prepare("
+				SELECT id 
+				FROM academic_list 
+				WHERE is_default = 1 
+				LIMIT1
+			");
+			$stmt->execute();
+			$result = $stmt->get_result();
+			$row = $result->fetch_assoc();
+			return $row ? $row['id'] : null;
+		}
+		
+		// Helper function to get current semester
+		private function get_current_semester() {
+			// You might want to store this in a settings table or configure it somewhere
+			// For now, returning the current semester (assuming it's stored somewhere)
+			// You should modify this according to your needs
+			return 1; // or get it from your configuration/settings
+		}
+
+
+
+
+
+
+
+
+
+		
+          
+
+		//November 19,2024 home.php/faculty
+
+		public function get_students($faculty_id, $academic_id) {
+			$query = "
+				SELECT DISTINCT 
+					sl.id,
+					sl.school_id,
+					CONCAT(sl.firstname, ' ', sl.lastname) as student_name,
+					cl.curriculum,
+					cl.level,
+					cl.section,
+					s.code as subject_code,
+					s.subject as subject_name
+				FROM faculty_assignments fa
+				INNER JOIN class_list cl ON fa.class_id = cl.id
+				INNER JOIN student_list sl ON cl.id = sl.class_id
+				INNER JOIN subject_list s ON fa.subject_id = s.id
+				WHERE fa.faculty_id = ? 
+				AND fa.academic_year_id = ?
+				AND fa.is_active = 1
+				ORDER BY sl.lastname ASC";
+	
+			$stmt = $this->db->prepare($query);
+			$stmt->bind_param("ii", $faculty_id, $academic_id);
+			$stmt->execute();
+			$result = $stmt->get_result();
+	
+			$students = array();
+			while ($row = $result->fetch_assoc()) {
+				$students[] = array(
+					'id' => $row['id'],
+					'school_id' => $row['school_id'],
+					'student_name' => $row['student_name'],
+					'class' => $row['curriculum'] . ' ' . $row['level'] . '-' . $row['section'],
+					'subject' => $row['subject_code'] . ' - ' . $row['subject_name']
+				);
+			}
+	
+			return json_encode($students);
+		}
+		
+
+
+
+		//add_subjects_to_class.php
+ // Get available subjects for a class (subjects not yet assigned)
+public function get_available_subjects() {
+    extract($_POST);
+    
+    if(!isset($class_id)) {
+        return json_encode([]);
+    }
+
+    $query = "SELECT s.* 
+              FROM subject_list s 
+              WHERE s.id NOT IN (
+                  SELECT subject_id 
+                  FROM class_subject_assignments 
+                  WHERE class_id = ?
+              )
+              AND s.department = (
+                  SELECT department 
+                  FROM class_list 
+                  WHERE id = ?
+              )
+              ORDER BY s.code ASC";
+              
+    $stmt = $this->db->prepare($query);
+    $stmt->bind_param("ii", $class_id, $class_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $subjects = array();
+    while($row = $result->fetch_assoc()) {
+        $subjects[] = array(
+            'id' => $row['id'],
+            'name' => $row['code'] . ' - ' . $row['subject']
+        );
+    }
+    
+    return json_encode($subjects);
+}
+
+// Get assigned subjects for a class
+public function get_assigned_subjects() {
+    extract($_POST);
+    
+    if(!isset($class_id)) {
+        return json_encode([]);
+    }
+
+    $query = "SELECT s.*, csa.id as assignment_id 
+              FROM class_subject_assignments csa 
+              JOIN subject_list s ON csa.subject_id = s.id 
+              WHERE csa.class_id = ? 
+              ORDER BY s.code ASC";
+              
+    $stmt = $this->db->prepare($query);
+    $stmt->bind_param("i", $class_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $subjects = array();
+    while($row = $result->fetch_assoc()) {
+        $subjects[] = array(
+            'id' => $row['id'],
+            'assignment_id' => $row['assignment_id'],
+            'name' => $row['code'] . ' - ' . $row['subject']
+        );
+    }
+    
+    return json_encode($subjects);
+}
+
+// Assign subject to class
+public function get_available_subjects_class() {
+	extract($_POST);
+	
+	if(!isset($class_id)) {
+		return json_encode(['status' => 'error', 'message' => 'Class ID is required']);
+	}
+
+	try {
+		$query = "SELECT s.* FROM subject_list s 
+				 WHERE s.id NOT IN (
+					 SELECT subject_id FROM class_subject_assignments 
+					 WHERE class_id = ?
+				 )
+				 ORDER BY s.subject ASC";
+		
+		$stmt = $this->db->prepare($query);
+		$stmt->bind_param("i", $class_id);
+		$stmt->execute();
+		$result = $stmt->get_result();
+		
+		$subjects = array();
+		while($row = $result->fetch_assoc()) {
+			$subjects[] = $row;
+		}
+		
+		return json_encode($subjects);
+	} catch(Exception $e) {
+		error_log("Error fetching available subjects: " . $e->getMessage());
+		return json_encode(['status' => 'error', 'message' => 'Failed to fetch subjects']);
+	}
+}
+
+public function save_class_subject() {
+    try {
+        extract($_POST);
+        
+        // Debug logging
+        error_log("Received POST data: " . print_r($_POST, true));
+
+        // Validate required fields
+        if(empty($class_id) || empty($subject_id)) {
+            error_log("Missing required fields");
+            return 0;
+        }
+
+        // Sanitize inputs
+        $class_id = $this->db->real_escape_string($class_id);
+        $subject_id = $this->db->real_escape_string($subject_id);
+        $subject_code = $this->db->real_escape_string($subject_code);
+        $subject_name = $this->db->real_escape_string($subject_name);
+
+        // Check for duplicate entry
+        $check = $this->db->query("SELECT id FROM class_subject 
+                                  WHERE class_id = '$class_id' 
+                                  AND subject_id = '$subject_id'");
+        
+        if($check->num_rows > 0) {
+            error_log("Duplicate entry found");
+            return 2; // Duplicate entry
+        }
+
+        // Insert new record
+        $query = "INSERT INTO class_subject (class_id, subject_id, subject_code, subject_name) 
+                 VALUES ('$class_id', '$subject_id', '$subject_code', '$subject_name')";
+        
+        error_log("Executing query: " . $query);
+        
+        if($this->db->query($query)) {
+            error_log("Query successful");
+            return 1; // Success
+        } else {
+            error_log("Query failed: " . $this->db->error);
+            return 0; // Failed
+        }
+
+    } catch (Exception $e) {
+        error_log("Error in save_class_subject: " . $e->getMessage());
+        return 0;
+    }
+}
+
+public function delete_class_subject() {
+	extract($_POST);
+	
+	if(!isset($id)) {
+		return 0;
+	}
+
+	$id = $this->db->real_escape_string($id);
+	$query = "DELETE FROM class_subject WHERE id = '$id'";
+	
+	if($this->db->query($query)) {
+		return 1;
+	}
+	return 0;
+}
+
+public function get_class_subject($id = null) {
+	if($id) {
+		$id = $this->db->real_escape_string($id);
+		$query = "SELECT cs.*, cl.curriculum, cl.level, cl.section 
+				 FROM class_subject cs 
+				 INNER JOIN class_list cl ON cs.class_id = cl.id 
+				 WHERE cs.id = '$id'";
+		$result = $this->db->query($query);
+		if($result->num_rows > 0) {
+			return json_encode($result->fetch_assoc());
+		}
+	}
+	return false;
+}
+public function get_class_assignments() {
+    extract($_POST);
+    
+    // Build WHERE clause
+    $where = [];
+    $params = [];
+    $types = "";
+    
+    // Add class filter if specified
+    if(!empty($class_id)) {
+        $where[] = "cl.id = ?";
+        $params[] = $class_id;
+        $types .= "i";
+    }
+    
+    // Add department filter if specified
+    if(!empty($department)) {
+        $where[] = "cl.department = ?";
+        $params[] = $department;
+        $types .= "s";
+    }
+    
+    // Combine WHERE conditions
+    $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+    
+    $query = "SELECT cl.id, 
+                     cl.department,
+                     CONCAT(cl.curriculum,' ',cl.level,' - ',cl.section) as class_name,
+                     GROUP_CONCAT(
+                         CONCAT(cs.id,'|',s.code,'|',s.subject)
+                         ORDER BY s.code ASC
+                         SEPARATOR '||'
+                     ) as subjects
+              FROM class_list cl
+              LEFT JOIN class_subject cs ON cl.id = cs.class_id
+              LEFT JOIN subject_list s ON cs.subject_id = s.id
+              $whereClause
+              GROUP BY cl.id
+              ORDER BY cl.department ASC, cl.curriculum ASC, cl.level ASC, cl.section ASC";
+    
+    // Prepare and execute statement if there are parameters
+    if (!empty($params)) {
+        $stmt = $this->db->prepare($query);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    } else {
+        $result = $this->db->query($query);
+    }
+    
+    $output = "";
+    $current_department = "";
+    
+    while($row = $result->fetch_assoc()) {
+        // Add department header if it's a new department
+        if ($current_department !== $row['department']) {
+            if ($current_department !== "") {
+                $output .= "</div>"; // Close previous department section
+            }
+            $current_department = $row['department'];
+            $output .= "<div class='department-section mb-4'>";
+            $output .= "<h4 class='department-header'>{$row['department']}</h4>";
+        }
+        
+        // Add class card
+        $output .= "<div class='class-card mb-3'>";
+        $output .= "<h5 class='class-title'>{$row['class_name']}</h5>";
+        $output .= "<div class='class-dropzone' data-class-id='{$row['id']}'>";
+        
+        if(!empty($row['subjects'])) {
+            $subjects = explode("||", $row['subjects']);
+            foreach($subjects as $subject) {
+                list($id, $code, $name) = explode("|", $subject);
+                $output .= "
+                    <div class='assigned-subject'>
+                        <span>$code - $name</span>
+                        <i class='fas fa-times remove-subject' 
+                           onclick='removeSubject($id)' 
+                           title='Remove subject'></i>
+                    </div>";
+            }
+        } else {
+            $output .= "<div class='text-center text-muted py-3'>
+                           <i class='fas fa-plus-circle mb-2'></i><br>
+                           Drop subjects here
+                       </div>";
+        }
+        
+        $output .= "</div></div>"; // Close class-dropzone and class-card
+    }
+    
+    // Close last department section if exists
+    if ($current_department !== "") {
+        $output .= "</div>";
+    }
+    
+    // Show empty state if no results
+    if (empty($output)) {
+        $dept_message = !empty($department) ? " for $department" : "";
+        $output = "<div class='alert alert-info'>
+                    <i class='fas fa-info-circle me-2'></i>
+                    No classes found{$dept_message}
+                  </div>";
+    }
+    
+    echo $output;
+}
+
+
+
+//Classroom.php
+
+
+public function get_classroom_details() {
+    extract($_POST);
+    
+    if(!isset($class_id)) {
+        return json_encode(['status' => 'error', 'message' => 'No class ID specified']);
+    }
+
+    // Get class details
+    $class_query = $this->db->prepare("
+        SELECT * FROM class_list WHERE id = ?
+    ");
+    $class_query->bind_param("i", $class_id);
+    $class_query->execute();
+    $class = $class_query->get_result()->fetch_assoc();
+
+    // Get subjects and instructors
+    $subjects_query = $this->db->prepare("
+        SELECT cs.*, s.code, s.subject, 
+               CONCAT(f.firstname, ' ', f.lastname) as faculty_name
+        FROM class_subject cs
+        LEFT JOIN subject_list s ON cs.subject_id = s.id
+        LEFT JOIN faculty_assignments fa ON cs.class_id = fa.class_id 
+            AND cs.subject_id = fa.subject_id
+        LEFT JOIN faculty_list f ON fa.faculty_id = f.id
+        WHERE cs.class_id = ?
+    ");
+    $subjects_query->bind_param("i", $class_id);
+    $subjects_query->execute();
+    $subjects = $subjects_query->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    // Get students
+    $students_query = $this->db->prepare("
+        SELECT * FROM student_list 
+        WHERE class_id = ?
+        ORDER BY lastname ASC, firstname ASC
+    ");
+    $students_query->bind_param("i", $class_id);
+    $students_query->execute();
+    $students = $students_query->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    return json_encode([
+        'status' => 'success',
+        'class' => $class,
+        'subjects' => $subjects,
+        'students' => $students
+    ]);
+}
+
+
+
+//live Classroom
+
+public function get_class_students() {
+    extract($_POST);
+    
+    try {
+        // Get only students assigned to this class
+        $class_students = $this->db->query("SELECT id, firstname, lastname 
+                                          FROM student_list 
+                                          WHERE class_id = $class_id 
+                                          ORDER BY lastname ASC, firstname ASC");
+        
+        $assigned_students = array();
+        while($row = $class_students->fetch_assoc()) {
+            $assigned_students[] = $row;
+        }
+        
+        return json_encode(array(
+            'status' => 'success',
+            'assigned_students' => $assigned_students,
+            'assigned_empty' => count($assigned_students) === 0
+        ));
+        
+    } catch (Exception $e) {
+        error_log("Error loading class students: " . $e->getMessage());
+        return json_encode(array(
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ));
+    }
+}
+
+public function save_classroom_assignment() {
+    extract($_POST);
+    
+    try {
+        // Validate required data
+        if (empty($students)) {
+            throw new Exception("No students assigned to the class.");
+        }
+        
+        if (empty($assignments)) {
+            throw new Exception("No subject-faculty assignments added.");
+        }
+
+        // Check if class already has assignments
+        $check_query = $this->db->prepare("
+            SELECT COUNT(*) as count 
+            FROM faculty_assignments 
+            WHERE class_id = ?
+        ");
+        $check_query->bind_param("i", $class_id);
+        $check_query->execute();
+        $existing_assignments = $check_query->get_result()->fetch_assoc()['count'];
+
+        // Begin transaction
+        $this->db->begin_transaction();
+
+        if ($existing_assignments > 0) {
+            // Update existing assignments
+            $update_query = $this->db->prepare("
+                UPDATE faculty_assignments 
+                SET faculty_id = ?, subject_id = ?
+                WHERE class_id = ? AND subject_id = ?
+            ");
+
+            foreach ($assignments as $assign) {
+                $update_query->bind_param(
+                    "iiii", 
+                    $assign['faculty_id'], 
+                    $assign['subject_id'],
+                    $class_id,
+                    $assign['subject_id']
+                );
+                $update_query->execute();
+
+                // If no rows were updated, this is a new assignment
+                if ($update_query->affected_rows == 0) {
+                    $insert_query = $this->db->prepare("
+                        INSERT INTO faculty_assignments (
+                            faculty_id, class_id, subject_id, 
+                            academic_year_id
+                        ) VALUES (?, ?, ?, ?)
+                    ");
+                    $insert_query->bind_param(
+                        "iiii", 
+                        $assign['faculty_id'], 
+                        $class_id, 
+                        $assign['subject_id'], 
+                        $academic_year_id
+                    );
+                    $insert_query->execute();
+                }
+            }
+        } else {
+            // Insert new assignments
+            $assignment_query = $this->db->prepare("
+                INSERT INTO faculty_assignments (
+                    faculty_id, class_id, subject_id, 
+                    academic_year_id
+                ) VALUES (?, ?, ?, ?)
+            ");
+
+            foreach ($assignments as $assign) {
+                $assignment_query->bind_param(
+                    "iiii", 
+                    $assign['faculty_id'], 
+                    $class_id, 
+                    $assign['subject_id'], 
+                    $academic_year_id
+                );
+                $assignment_query->execute();
+            }
+        }
+
+        // Update student class assignments
+        $student_query = $this->db->prepare("
+            UPDATE student_list 
+            SET class_id = ? 
+            WHERE id = ?
+        ");
+
+        foreach ($students as $student_id) {
+            $student_query->bind_param("ii", $class_id, $student_id);
+            $student_query->execute();
+        }
+
+        $this->db->commit();
+
+        return json_encode([
+            'status' => 'success',
+            'message' => $existing_assignments > 0 ? 'update' : 'new',
+            'existing_assignments' => $existing_assignments > 0
+        ]);
+
+    } catch (Exception $e) {
+        $this->db->rollback();
+        error_log("Error saving classroom assignment: " . $e->getMessage());
+        return json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+}
+
+public function get_department_resources() {
+    try {
+        extract($_POST);
+        
+        if(!isset($department_id)) {
+            throw new Exception("Department ID is required");
+        }
+
+        // Get department name
+        $dept_query = "SELECT name FROM department_list WHERE id = ?";
+        $stmt = $this->db->prepare($dept_query);
+        $stmt->bind_param("i", $department_id);
+        $stmt->execute();
+        $dept_result = $stmt->get_result();
+        
+        if($dept_result->num_rows === 0) {
+            throw new Exception("Department not found");
+        }
+        
+        $department_name = $dept_result->fetch_assoc()['name'];
+
+        // Get students from department's classes
+        $student_query = "
+            SELECT DISTINCT sl.id 
+            FROM student_list sl
+            INNER JOIN class_list cl ON sl.class_id = cl.id
+            WHERE cl.department = ?
+            ORDER BY sl.lastname ASC, sl.firstname ASC
+        ";
+        $stmt = $this->db->prepare($student_query);
+        $stmt->bind_param("s", $department_name);
+        $stmt->execute();
+        $student_result = $stmt->get_result();
+        
+        $student_ids = array();
+        while($row = $student_result->fetch_assoc()) {
+            $student_ids[] = $row['id'];
+        }
+
+        // Get faculty from department
+        $faculty_query = "
+            SELECT id 
+            FROM faculty_list 
+            WHERE department = ?
+            ORDER BY lastname ASC, firstname ASC
+        ";
+        $stmt = $this->db->prepare($faculty_query);
+        $stmt->bind_param("s", $department_name);
+        $stmt->execute();
+        $faculty_result = $stmt->get_result();
+        
+        $faculty_ids = array();
+        while($row = $faculty_result->fetch_assoc()) {
+            $faculty_ids[] = $row['id'];
+        }
+
+        // Get subjects from department
+        $subject_query = "
+            SELECT id 
+            FROM subject_list 
+            WHERE department = ?
+            ORDER BY subject ASC
+        ";
+        $stmt = $this->db->prepare($subject_query);
+        $stmt->bind_param("s", $department_name);
+        $stmt->execute();
+        $subject_result = $stmt->get_result();
+        
+        $subject_ids = array();
+        while($row = $subject_result->fetch_assoc()) {
+            $subject_ids[] = $row['id'];
+        }
+
+        // Get classes from department
+        $class_query = "
+            SELECT id 
+            FROM class_list 
+            WHERE department = ?
+            ORDER BY curriculum ASC, level ASC, section ASC
+        ";
+        $stmt = $this->db->prepare($class_query);
+        $stmt->bind_param("s", $department_name);
+        $stmt->execute();
+        $class_result = $stmt->get_result();
+        
+        $class_ids = array();
+        while($row = $class_result->fetch_assoc()) {
+            $class_ids[] = $row['id'];
+        }
+
+        return json_encode([
+            'status' => 'success',
+            'students' => $student_ids,
+            'faculty' => $faculty_ids,
+            'subjects' => $subject_ids,
+            'classes' => $class_ids,
+            'department_name' => $department_name
+        ]);
+
+    } catch (Exception $e) {
+        error_log("Error getting department resources: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+}
+
+
+//add new student modified november 23, 2024
+
+public function get_classes_by_department_modified() {
+    extract($_POST);
+    
+    if(!isset($department)) {
+        return json_encode([
+            'status' => 'error',
+            'message' => 'No department specified'
+        ]);
+    }
+    
+    try {
+        // Modified query to get all relevant class information
+        $query = "SELECT DISTINCT cl.id, cl.curriculum, cl.level, cl.section 
+                 FROM class_list cl 
+                 WHERE cl.department = ?
+                 ORDER BY cl.curriculum, cl.level, cl.section";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->bind_param("s", $department);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $classes = array();
+        while($row = $result->fetch_assoc()) {
+            $classes[] = [
+                'id' => $row['id'],
+                'curriculum' => $row['curriculum'],
+                'level' => $row['level'],
+                'section' => $row['section']
+            ];
+        }
+        
+        return json_encode([
+            'status' => 'success',
+            'classes' => $classes
+        ]);
+        
+    } catch (Exception $e) {
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Database error: ' . $e->getMessage()
+        ]);
+    }
+}
+
+//modified_cme
+public function get_classes_by_department_modified_cme() {
+    extract($_POST);
+    
+    try {
+        // Modified query to get only CME classes
+        $query = "SELECT DISTINCT cl.id, cl.curriculum, cl.level, cl.section 
+                 FROM class_list cl 
+                 WHERE cl.department = 'CME'
+                 AND cl.curriculum LIKE '%CME%'
+                 ORDER BY cl.curriculum, cl.level, cl.section";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $classes = array();
+        while($row = $result->fetch_assoc()) {
+            $classes[] = [
+                'id' => $row['id'],
+                'curriculum' => $row['curriculum'],
+                'level' => $row['level'],
+                'section' => $row['section']
+            ];
+        }
+        
+        return json_encode([
+            'status' => 'success',
+            'classes' => $classes
+        ]);
+        
+    } catch (Exception $e) {
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Database error: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
+
+
+
+//evaluation status
+
+function get_evaluation_status() {
+    try {
+        $academic_id = isset($_POST['academic_id']) ? $_POST['academic_id'] : null;
+        $semester = isset($_POST['semester']) ? $_POST['semester'] : null;
+        $department = isset($_POST['department']) ? $_POST['department'] : null;
+
+        $query = "
+            SELECT 
+                cl.curriculum,
+                cl.level,
+                cl.section,
+                sl.id as student_id,
+                sl.school_id,
+                sl.firstname,
+                sl.lastname,
+                f.firstname as faculty_fname,
+                f.lastname as faculty_lname,
+                s.code as subject_code,
+                s.subject as subject_name,
+                fa.semester,
+                CASE 
+                    WHEN el.evaluation_id IS NOT NULL THEN 'Submitted'
+                    ELSE 'Pending'
+                END as status,
+                el.date_taken
+            FROM student_list sl
+            INNER JOIN class_list cl ON sl.class_id = cl.id
+            INNER JOIN faculty_assignments fa ON cl.id = fa.class_id
+            INNER JOIN faculty_list f ON fa.faculty_id = f.id
+            INNER JOIN subject_list s ON fa.subject_id = s.id
+            LEFT JOIN evaluation_list el ON (
+                sl.id = el.student_id AND
+                fa.faculty_id = el.faculty_id AND
+                fa.subject_id = el.subject_id AND
+                fa.academic_year_id = el.academic_id
+            )
+            WHERE fa.is_active = 1";
+
+        $params = [];
+        $types = "";
+
+        // Add filters
+        if ($academic_id) {
+            $query .= " AND fa.academic_year_id = ?";
+            $params[] = $academic_id;
+            $types .= "i";
+        }
+
+        if ($semester) {
+            $query .= " AND fa.semester = ?";
+            $params[] = $semester;
+            $types .= "i";
+        }
+
+        if ($department) {
+            $query .= " AND cl.curriculum = ?";
+            $params[] = $department;
+            $types .= "s";
+        }
+
+        $query .= " ORDER BY cl.curriculum, cl.level, cl.section, sl.lastname, sl.firstname";
+
+        // Prepare and execute
+        $stmt = $this->db->prepare($query);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $data = array();
+        while ($row = $result->fetch_assoc()) {
+            // Format date to text month
+            $formatted_date = $row['date_taken'] ? 
+                date('F j, Y \a\t g:i a', strtotime($row['date_taken'])) : 
+                null;
+
+            $data[] = array(
+                'class_name' => "{$row['curriculum']} {$row['level']}-{$row['section']}",
+                'student_id' => $row['school_id'],
+                'student_name' => "{$row['lastname']}, {$row['firstname']}",
+                'faculty_name' => "{$row['faculty_lname']}, {$row['faculty_fname']}",
+                'subject' => "({$row['subject_code']}) {$row['subject_name']}",
+                'semester' => $row['semester'],
+                'status' => $row['status'],
+                'date_taken' => $formatted_date
+            );
+        }
+
+        return json_encode(['status' => 'success', 'data' => $data]);
+
+    } catch (Exception $e) {
+        error_log("Error in get_evaluation_status: " . $e->getMessage());
+        return json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+}
+
+public function get_sections_by_department() {
+    extract($_POST);
+    
+    if(!isset($department)) {
+        return json_encode([
+            'status' => 'error',
+            'message' => 'No department specified'
+        ]);
+    }
+    
+    try {
+        // Debug
+        error_log("Department: " . $department);
+        
+        $query = "SELECT DISTINCT 
+                 cl.section,
+                 CONCAT(cl.curriculum, ' ', cl.level, '-', cl.section) as class_name
+                 FROM class_list cl 
+                 WHERE cl.department = ?
+                 ORDER BY cl.curriculum, cl.level, cl.section";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->bind_param("s", $department);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $sections = array();
+        while($row = $result->fetch_assoc()) {
+            $sections[] = array(
+                'section' => $row['section'],
+                'class_name' => $row['class_name']
+            );
+        }
+        
+        // Debug
+        error_log("Found sections: " . print_r($sections, true));
+        
+        return json_encode([
+            'status' => 'success',
+            'sections' => $sections
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("Error in get_sections_by_department: " . $e->getMessage());
+        return json_encode([
+            'status' => 'error',
+            'message' => 'Database error: ' . $e->getMessage()
+        ]);
+    }
+}
+
+//faculty - students
+
+// Add this function to admin_class.php
+public function get_student_details_faculty() {
+	extract($_POST);
+	
+	if(!isset($student_id)) {
+		return json_encode(['status' => 'error', 'message' => 'Student ID is required']);
+	}
+	 // Modified query to search by school_id instead of id
+	$query = "
+		SELECT 
+			sl.*,
+			cl.curriculum,
+			cl.level,
+			cl.section
+		FROM student_list sl
+		LEFT JOIN class_list cl ON sl.class_id = cl.id
+		WHERE sl.school_id = ?";
+	 try {
+		$stmt = $this->db->prepare($query);
+		$stmt->bind_param("s", $student_id); // Changed to string parameter
+		$stmt->execute();
+		$result = $stmt->get_result();
+		 if($result->num_rows > 0) {
+			$student = $result->fetch_assoc();
+			$student['class'] = $student['curriculum'] . ' ' . $student['level'] . '-' . $student['section'];
+			
+			// Ensure avatar path is correct
+			$student['avatar_path'] = !empty($student['avatar']) && $student['avatar'] !== 'no-image-available.png'
+				? '../uploads/' . $student['avatar']
+				: '../assets/img/no-image-available.png';
+			 return json_encode([
+				'status' => 'success',
+				'data' => $student
+			]);
+		}
+		 return json_encode([
+			'status' => 'error',
+			'message' => 'Student not found'
+		]);
+	 } catch(Exception $e) {
+		error_log("Error fetching student details: " . $e->getMessage());
+		return json_encode([
+			'status' => 'error',
+			'message' => 'Failed to fetch student details'
+		]);
+	}
+
+
+
+	//Different Staff
+	
+	
+function login4_ceas() {
+    extract($_POST);
+    
+    // Check if college is provided
+    if (!isset($college) || empty($college)) {
+        return 4; // Return code for missing college selection
+    }
+    
+    // Validate that only CEAS is allowed
+    if ($college !== 'CEAS') {
+        return 6; // Invalid department selection
+    }
+    
+    // Check if the identifier is an email
+    if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
+        $qry = $this->db->query("SELECT * FROM ceas_staff WHERE email = '".$identifier."'");
+    } else {
+        return 2; // Invalid identifier (must be email for staff)
+    }
+    
+    if($qry->num_rows > 0) {
+        $row = $qry->fetch_array();
+        
+        if (password_verify($password, $row['password'])) {
+            // Store user data in session
+            foreach ($row as $key => $value) {
+                if($key != 'password' && !is_numeric($key))
+                    $_SESSION['login_'.$key] = $value;
+            }
+            $_SESSION['login_id'] = $row['id'];
+            $_SESSION['login_type'] = 4; // Staff type
+            $_SESSION['login_department'] = 'CEAS';
+            
+            return 'CEAS'; // Success
+        }
+        return 2; // Wrong password
+    }
+    return 2; // User not found
+}
+
+
+
+
+// Add logout functions for each department
+function logout4_ceas() {
+    session_destroy();
+    foreach ($_SESSION as $key => $value) {
+        unset($_SESSION[$key]);
+    }
+    header("location:stafflogin_ceas.php");
+}
+
+function logout4_coe() {
+    session_destroy();
+    foreach ($_SESSION as $key => $value) {
+        unset($_SESSION[$key]);
+    }
+    header("location:stafflogin_coe.php");
+}
+
+function logout4_cme() {
+    session_destroy();
+    foreach ($_SESSION as $key => $value) {
+        unset($_SESSION[$key]);
+    }
+    header("location:stafflogin_cme.php");
+}
+ 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Completed Evaluations in student dashboard
+
+ 
+public function get_completed_evaluations() {
+	if(!isset($_SESSION['login_id'])) {
+		return json_encode([
+			'status' => 'error',
+			'message' => 'User not logged in'
+		]);
+	}
+	
+	$student_id = $_SESSION['login_id'];
+	$faculty_id = isset($_GET['faculty_id']) ? $_GET['faculty_id'] : null;
+	$academic_id = isset($_GET['academic_id']) ? $_GET['academic_id'] : null;
+	$semester = isset($_GET['semester']) ? $_GET['semester'] : null;
+	
+	$query = "
+		SELECT 
+			e.evaluation_id,
+			e.date_taken,
+			f.firstname as faculty_firstname,
+			f.lastname as faculty_lastname,
+			s.code as subject_code,
+			s.subject as subject_name,
+			c.curriculum,
+			c.level,
+			c.section,
+			a.year,
+			a.semester,
+			e.comment
+		FROM evaluation_list e
+		LEFT JOIN faculty_list f ON e.faculty_id = f.id
+		LEFT JOIN subject_list s ON e.subject_id = s.id
+		LEFT JOIN class_list c ON e.class_id = c.id
+		LEFT JOIN academic_list a ON e.academic_id = a.id
+		WHERE e.student_id = ?";
+	
+	$params = [$student_id];
+	$types = "i";
+	
+	if ($faculty_id && $faculty_id !== '') {
+		$query .= " AND e.faculty_id = ?";
+		$params[] = $faculty_id;
+		$types .= "i";
+	}
+	
+	if ($academic_id && $academic_id !== '') {
+		$query .= " AND e.academic_id = ?";
+		$params[] = $academic_id;
+		$types .= "i";
+	}
+	
+	if ($semester && $semester !== '') {
+		$query .= " AND a.semester = ?";
+		$params[] = $semester;
+		$types .= "i";
+	}
+	
+	$query .= " ORDER BY e.date_taken DESC";
+	
+	try {
+		$stmt = $this->db->prepare($query);
+		$stmt->bind_param($types, ...$params);
+		$stmt->execute();
+		$result = $stmt->get_result();
+		
+		$evaluations = array();
+		while($row = $result->fetch_assoc()) {
+			$row['date_taken'] = date('F j, Y g:i A', strtotime($row['date_taken']));
+			$row['class'] = $row['curriculum'] . ' ' . $row['level'] . '-' . $row['section'];
+			$row['faculty_name'] = $row['faculty_lastname'] . ', ' . $row['faculty_firstname'];
+			$row['academic_period'] = $row['year'] . ' - ' . $this->get_semester_text($row['semester']);
+			
+			$evaluations[] = $row;
+		}
+		
+		return json_encode([
+			'status' => 'success',
+			'data' => $evaluations
+		]);
+		
+	} catch(Exception $e) {
+		error_log("Error fetching completed evaluations: " . $e->getMessage());
+		return json_encode([
+			'status' => 'error',
+			'message' => 'Failed to fetch completed evaluations'
+		]);
+	}
+} 
+ 
+ private function get_semester_text($semester) {
+	switch($semester) {
+		case 1:
+			return '1st Semester';
+		case 2:
+			return '2nd Semester';
+		case 3:
+			return 'Summer';
+		default:
+			return 'Unknown Semester';
+	}
+}
+
+
+public function get_evaluation_details() {
+	if(!isset($_POST['evaluation_id'])) {
+		return json_encode([
+			'status' => 'error',
+			'message' => 'Evaluation ID not provided'
+		]);
+	}
+	
+	$evaluation_id = $_POST['evaluation_id'];
+	
+	// Updated query to include academic year information
+	$query = "
+		SELECT 
+			c.criteria,
+			q.question,
+			ea.rate as answer,
+			e.comment,
+			CONCAT(a.year, ' - ', 
+				CASE a.semester 
+					WHEN 1 THEN '1st Semester'
+					WHEN 2 THEN '2nd Semester'
+					WHEN 3 THEN 'Summer'
+					ELSE 'Unknown'
+				END
+			) as academic_period
+		FROM evaluation_answers ea
+		JOIN evaluation_list e ON ea.evaluation_id = e.evaluation_id
+		JOIN question_list q ON ea.question_id = q.id
+		JOIN criteria_list c ON q.criteria_id = c.id
+		JOIN academic_list a ON e.academic_id = a.id
+		WHERE ea.evaluation_id = ?
+		ORDER BY c.order_by ASC, q.order_by ASC";
+		
+	try {
+		$stmt = $this->db->prepare($query);
+		$stmt->bind_param("i", $evaluation_id);
+		$stmt->execute();
+		$result = $stmt->get_result();
+		
+		if ($result->num_rows == 0) {
+			return json_encode([
+				'status' => 'error',
+				'message' => 'No evaluation details found'
+			]);
+		}
+		
+		$questions = array();
+		$comment = '';
+		$academic_period = '';
+		
+		while($row = $result->fetch_assoc()) {
+			$questions[] = [
+				'criteria' => $row['criteria'],
+				'question' => $row['question'],
+				'answer' => $row['answer']
+			];
+			$comment = $row['comment'];
+			$academic_period = $row['academic_period'];
+		}
+		
+		return json_encode([
+			'status' => 'success',
+			'data' => [
+				'questions' => $questions,
+				'comment' => $comment,
+				'academic_period' => $academic_period
+			]
+		]);
+		
+	} catch(Exception $e) {
+		error_log("Error fetching evaluation details: " . $e->getMessage());
+		return json_encode([
+			'status' => 'error',
+			'message' => 'Failed to fetch evaluation details: ' . $e->getMessage()
+		]);
+	}
+} 
+
+
+
+//Staffs add_new_staff
+
+function save_staff_coe() {
+    extract($_POST);
+    
+    // Validate required fields
+    if(empty($firstname) || empty($lastname) || empty($email) || empty($password)) {
+        return 3; // Missing fields
+    }
+    
+    // Check if email exists
+    $stmt = $this->db->prepare("SELECT id FROM coe_staff WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $check = $stmt->get_result();
+    if($check->num_rows > 0) {
+        return 2; // Email exists
+    }
+    
+    // Handle image upload
+    $avatar = 'no-image-available.png'; // Default image
+    if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+        $fname = strtotime(date('y-m-d H:i')).'_'.basename($_FILES['img']['name']);
+        $target_dir = 'assets/uploads/';
+        $target_file = $target_dir . $fname;
+        
+        // Check if file is an image
+        $check = getimagesize($_FILES['img']['tmp_name']);
+        if($check !== false) {
+            if(move_uploaded_file($_FILES['img']['tmp_name'], $target_file)) {
+                $avatar = $fname;
+            }
+        }
+    }
+    
+    // Hash the password
+    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+    
+    // Insert new staff
+    $stmt = $this->db->prepare("INSERT INTO coe_staff (firstname, lastname, email, password, department, avatar) VALUES (?, ?, ?, ?, 'COE', ?)");
+    $stmt->bind_param("sssss", $firstname, $lastname, $email, $hashed_password, $avatar);
+    $save = $stmt->execute();
+    
+    return $save ? 1 : 0;
+}
+
+function save_staff_ceas() {
+    extract($_POST);
+    
+    // Validate required fields
+    if(empty($firstname) || empty($lastname) || empty($email)) {
+        return 3; // Missing fields
+    }
+    
+    // Check if email exists
+    $check = $this->db->query("SELECT id FROM ceas_staff WHERE email = '$email'");
+    if($check->num_rows > 0) {
+        return 2; // Email exists
+    }
+    
+    // Handle image upload
+    $avatar = 'no-image-available.png'; // Default image
+    if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+        $fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
+        $move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/'. $fname);
+        if($move) {
+            $avatar = $fname;
+        }
+    }
+    
+    // New staff
+    $password = password_hash($password, PASSWORD_DEFAULT);
+    $save = $this->db->query("INSERT INTO ceas_staff (firstname, lastname, email, password, department, avatar) 
+        VALUES ('$firstname', '$lastname', '$email', '$password', 'CEAS', '$avatar')");
+    
+    return $save ? 1 : 0;
+}
+function save_staff_cme() {
+    extract($_POST);
+    
+    // Validate required fields
+    if(empty($firstname) || empty($lastname) || empty($email)) {
+        return 3; // Missing fields
+    }
+    
+    // Check if email exists
+    $check = $this->db->query("SELECT id FROM cme_staff WHERE email = '$email'");
+    if($check->num_rows > 0) {
+        return 2; // Email exists
+    }
+    
+    // Handle image upload
+    $avatar = 'no-image-available.png'; // Default image
+    if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+        $fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
+        $move = move_uploaded_file($_FILES['img']['tmp_name'], 'assets/uploads/'. $fname);
+        if($move) {
+            $avatar = $fname;
+        }
+    }
+    
+    // New staff
+    $password = password_hash($password, PASSWORD_DEFAULT);
+    $save = $this->db->query("INSERT INTO cme_staff (firstname, lastname, email, password, department, avatar) 
+        VALUES ('$firstname', '$lastname', '$email', '$password', 'CME', '$avatar')");
+    
+    return $save ? 1 : 0;
+}
+
+
+
+function delete_staff_cme() {
+    extract($_POST);
+    $delete = $this->db->query("DELETE FROM cme_staff WHERE id = " . $id);
+    return $delete ? 1 : 0;
+}
+
+function delete_staff_coe() {
+    extract($_POST);
+    $delete = $this->db->query("DELETE FROM coe_staff WHERE id = " . $id);
+    return $delete ? 1 : 0;
+}
+
+function delete_staff_ceas() {
+    extract($_POST);
+    $delete = $this->db->query("DELETE FROM ceas_staff WHERE id = " . $id);
+    return $delete ? 1 : 0;
+}
+
+
+//edit staffs coe,cme and ceas
+
+
+function update_staff_ceas() {
+    extract($_POST);
+    
+    // Validate required fields
+    if(empty($firstname) || empty($lastname)) {
+        return 3; // Missing fields
+    }
+    
+    $data = " firstname = '$firstname' ";
+    $data .= ", lastname = '$lastname' ";
+    
+    // Only update email if provided
+    if(!empty($email)) {
+        // Check if email exists for other users
+        $check = $this->db->query("SELECT id FROM ceas_staff WHERE email = '$email' AND id != '$id'");
+        if($check->num_rows > 0) {
+            return 2; // Email exists
+        }
+        $data .= ", email = '$email' ";
+    }
+    
+    // Only update password if provided
+    if(!empty($password)) {
+        $password = password_hash($password, PASSWORD_DEFAULT);
+        $data .= ", password = '$password' ";
+    }
+    
+    $save = $this->db->query("UPDATE ceas_staff SET $data WHERE id = $id");
+    
+    return $save ? 1 : 0;
+}
+
+function update_staff_cme() {
+    extract($_POST);
+    
+    if(empty($firstname) || empty($lastname)) {
+        return 3;
+    }
+    
+    $data = " firstname = '$firstname' ";
+    $data .= ", lastname = '$lastname' ";
+    
+    if(!empty($email)) {
+        $check = $this->db->query("SELECT id FROM cme_staff WHERE email = '$email' AND id != '$id'");
+        if($check->num_rows > 0) {
+            return 2;
+        }
+        $data .= ", email = '$email' ";
+    }
+    
+    if(!empty($password)) {
+        $password = password_hash($password, PASSWORD_DEFAULT);
+        $data .= ", password = '$password' ";
+    }
+    
+    $save = $this->db->query("UPDATE cme_staff SET $data WHERE id = $id");
+    
+    return $save ? 1 : 0;
+}
+
+function update_staff_coe() {
+    extract($_POST);
+    
+    if(empty($firstname) || empty($lastname)) {
+        return 3;
+    }
+    
+    $data = " firstname = '$firstname' ";
+    $data .= ", lastname = '$lastname' ";
+    
+    if(!empty($email)) {
+        $check = $this->db->query("SELECT id FROM coe_staff WHERE email = '$email' AND id != '$id'");
+        if($check->num_rows > 0) {
+            return 2;
+        }
+        $data .= ", email = '$email' ";
+    }
+    
+    if(!empty($password)) {
+        $password = password_hash($password, PASSWORD_DEFAULT);
+        $data .= ", password = '$password' ";
+    }
+    
+    $save = $this->db->query("UPDATE coe_staff SET $data WHERE id = $id");
+    
+    return $save ? 1 : 0;
+}
+
+
+
+//Assign Faculty to Classes
+
+public function get_assignments() {
+    try {
+        // First get the default academic year and semester
+        $academic_query = $this->db->query("
+            SELECT id, semester 
+            FROM academic_list 
+            WHERE is_default = 1 
+            LIMIT 1
+        ");
+        
+        if(!$academic_query || $academic_query->num_rows == 0) {
+            throw new Exception("No default academic year found");
+        }
+        
+        $academic = $academic_query->fetch_assoc();
+        
+        // Now get the assignments for this academic year and semester
+        $query = $this->db->query("
+            SELECT 
+                fa.id,
+                fa.faculty_id,
+                fa.class_id,
+                fa.subject_id,
+                fa.academic_year_id,
+                fa.semester,
+                f.firstname as faculty_firstname,
+                f.lastname as faculty_lastname,
+                c.curriculum,
+                c.level,
+                c.section,
+                s.code as subject_code,
+                s.subject as subject_name,
+                a.year as academic_year
+            FROM faculty_assignments fa
+            JOIN faculty_list f ON fa.faculty_id = f.id
+            JOIN class_list c ON fa.class_id = c.id
+            JOIN subject_list s ON fa.subject_id = s.id
+            JOIN academic_list a ON fa.academic_year_id = a.id
+            WHERE fa.academic_year_id = {$academic['id']}
+            AND fa.semester = {$academic['semester']}
+            ORDER BY c.curriculum ASC, c.level ASC, c.section ASC
+        ");
+        
+        $assignments = array();
+        while($row = $query->fetch_assoc()) {
+            $assignments[] = $row;
+        }
+        
+        return json_encode([
+            'status' => 'success',
+            'data' => $assignments
+        ]);
+        
+    } catch(Exception $e) {
+        return json_encode([
+            'status' => 'error',
+            'message' => $e->getMessage()
+        ]);
+    }
+}
+
+
+//Staff-cme-assignclasssubjects and evlaution status
+
+public function load_assignments_faculties_cme() {
+    extract($_POST);
+    
+    // Get current academic year
+    $academic_year_query = $this->db->query("SELECT id FROM academic_list WHERE is_default = 1 LIMIT 1");
+    $academic_year = $academic_year_query->fetch_assoc();
+    $academic_year_id = $academic_year['id'];
+    
+    // Base query with CME department filter
+    $sql = "SELECT 
+        fa.id,
+        f.firstname as faculty_name,
+        f.lastname as faculty_lastname,
+        c.curriculum as class_name,
+        c.level,
+        c.section,
+        s.subject as subject_name,
+        c.department
+    FROM faculty_assignments fa
+    JOIN faculty_list f ON fa.faculty_id = f.id
+    JOIN class_list c ON fa.class_id = c.id
+    JOIN subject_list s ON fa.subject_id = s.id
+    WHERE fa.academic_year_id = ? AND fa.is_active = 1 AND c.department = 'CME'";
+    
+    // Prepare and execute the query
+    $stmt = $this->db->prepare($sql);
+    $stmt->bind_param("i", $academic_year_id);
+    
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $output = "";
+    while ($row = $result->fetch_assoc()) {
+        $output .= "
+            <tr>
+                <td>{$row['faculty_name']} {$row['faculty_lastname']}</td>
+                <td>{$row['class_name']} {$row['level']}-{$row['section']}</td>
+                <td>{$row['subject_name']}</td>
+                <td>{$row['department']}</td>
+                <td>
+                    <button class='btn btn-danger btn-sm delete-assignment' data-id='{$row['id']}'>
+                        <i class='fas fa-trash'></i>
+                    </button>
+                </td>
+            </tr>
+        ";
+    }
+    
+    $stmt->close();
+    return $output;
+}
+
+
+function get_evaluation_status_cme() {
+    try {
+        $academic_id = isset($_POST['academic_id']) ? $_POST['academic_id'] : null;
+        $semester = isset($_POST['semester']) ? $_POST['semester'] : null;
+
+        $query = "
+            SELECT 
+                cl.curriculum,
+                cl.level,
+                cl.section,
+                sl.id as student_id,
+                sl.school_id,
+                sl.firstname,
+                sl.lastname,
+                f.firstname as faculty_fname,
+                f.lastname as faculty_lname,
+                s.code as subject_code,
+                s.subject as subject_name,
+                fa.semester,
+                CASE 
+                    WHEN el.evaluation_id IS NOT NULL THEN 'Submitted'
+                    ELSE 'Pending'
+                END as status,
+                el.date_taken
+            FROM student_list sl
+            INNER JOIN class_list cl ON sl.class_id = cl.id
+            INNER JOIN faculty_assignments fa ON cl.id = fa.class_id
+            INNER JOIN faculty_list f ON fa.faculty_id = f.id
+            INNER JOIN subject_list s ON fa.subject_id = s.id
+            LEFT JOIN evaluation_list el ON (
+                sl.id = el.student_id AND
+                fa.faculty_id = el.faculty_id AND
+                fa.subject_id = el.subject_id AND
+                fa.academic_year_id = el.academic_id
+            )
+            WHERE fa.is_active = 1
+            AND cl.department = 'CME'"; // Add fixed filter for CME department
+
+        $params = [];
+        $types = "";
+
+        // Add academic year filter
+        if ($academic_id) {
+            $query .= " AND fa.academic_year_id = ?";
+            $params[] = $academic_id;
+            $types .= "i";
+        }
+
+        // Add semester filter
+        if ($semester) {
+            $query .= " AND fa.semester = ?";
+            $params[] = $semester;
+            $types .= "i";
+        }
+
+        $query .= " ORDER BY cl.curriculum, cl.level, cl.section, sl.lastname, sl.firstname";
+
+        // Prepare and execute
+        $stmt = $this->db->prepare($query);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $data = array();
+        while ($row = $result->fetch_assoc()) {
+            // Format date to text month
+            $formatted_date = $row['date_taken'] ? 
+                date('F j, Y \a\t g:i a', strtotime($row['date_taken'])) : 
+                null;
+
+            $data[] = array(
+                'class_name' => "{$row['curriculum']} {$row['level']}-{$row['section']}",
+                'student_id' => $row['school_id'],
+                'student_name' => "{$row['lastname']}, {$row['firstname']}",
+                'faculty_name' => "{$row['faculty_lname']}, {$row['faculty_fname']}",
+                'subject' => "({$row['subject_code']}) {$row['subject_name']}",
+                'semester' => $row['semester'],
+                'status' => $row['status'],
+                'date_taken' => $formatted_date
+            );
+        }
+
+        return json_encode(['status' => 'success', 'data' => $data]);
+
+    } catch (Exception $e) {
+        error_log("Error in get_evaluation_status_cme: " . $e->getMessage());
+        return json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+}
+
+
+function get_evaluation_status_coe() {
+    try {
+        $academic_id = isset($_POST['academic_id']) ? $_POST['academic_id'] : null;
+        $semester = isset($_POST['semester']) ? $_POST['semester'] : null;
+
+        $query = "
+            SELECT 
+                cl.curriculum,
+                cl.level,
+                cl.section,
+                sl.id as student_id,
+                sl.school_id,
+                sl.firstname,
+                sl.lastname,
+                f.firstname as faculty_fname,
+                f.lastname as faculty_lname,
+                s.code as subject_code,
+                s.subject as subject_name,
+                fa.semester,
+                CASE 
+                    WHEN el.evaluation_id IS NOT NULL THEN 'Submitted'
+                    ELSE 'Pending'
+                END as status,
+                el.date_taken
+            FROM student_list sl
+            INNER JOIN class_list cl ON sl.class_id = cl.id
+            INNER JOIN faculty_assignments fa ON cl.id = fa.class_id
+            INNER JOIN faculty_list f ON fa.faculty_id = f.id
+            INNER JOIN subject_list s ON fa.subject_id = s.id
+            LEFT JOIN evaluation_list el ON (
+                sl.id = el.student_id AND
+                fa.faculty_id = el.faculty_id AND
+                fa.subject_id = el.subject_id AND
+                fa.academic_year_id = el.academic_id
+            )
+            WHERE fa.is_active = 1
+            AND cl.department = 'COE'"; // Filter for COE department
+
+        $params = [];
+        $types = "";
+
+        // Add academic year filter
+        if ($academic_id) {
+            $query .= " AND fa.academic_year_id = ?";
+            $params[] = $academic_id;
+            $types .= "i";
+        }
+
+        // Add semester filter
+        if ($semester) {
+            $query .= " AND fa.semester = ?";
+            $params[] = $semester;
+            $types .= "i";
+        }
+
+        $query .= " ORDER BY cl.curriculum, cl.level, cl.section, sl.lastname, sl.firstname";
+
+        // Prepare and execute
+        $stmt = $this->db->prepare($query);
+        if (!empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $data = array();
+        while ($row = $result->fetch_assoc()) {
+            // Format date to text month
+            $formatted_date = $row['date_taken'] ? 
+                date('F j, Y \a\t g:i a', strtotime($row['date_taken'])) : 
+                null;
+
+            $data[] = array(
+                'class_name' => "{$row['curriculum']} {$row['level']}-{$row['section']}",
+                'student_id' => $row['school_id'],
+                'student_name' => "{$row['lastname']}, {$row['firstname']}",
+                'faculty_name' => "{$row['faculty_lname']}, {$row['faculty_fname']}",
+                'subject' => "({$row['subject_code']}) {$row['subject_name']}",
+                'semester' => $row['semester'],
+                'status' => $row['status'],
+                'date_taken' => $formatted_date
+            );
+        }
+
+        return json_encode(['status' => 'success', 'data' => $data]);
+
+    } catch (Exception $e) {
+        error_log("Error in get_evaluation_status_coe: " . $e->getMessage());
+        return json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+    }
+}
+
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
 		
 
 
 
 
 
+	
 
-		
-		
-}		
+    
+	
+
 		
 	
 	
