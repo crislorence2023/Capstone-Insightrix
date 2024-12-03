@@ -1,4 +1,3 @@
-
 <?php 
 function ordinal_suffix($num){
     $num = $num % 100;
@@ -34,9 +33,15 @@ if($academic_status == 1) {
     FROM restriction_list r 
     INNER JOIN faculty_list f on f.id = r.faculty_id 
     INNER JOIN subject_list s on s.id = r.subject_id 
-    WHERE academic_id ={$_SESSION['academic']['id']} 
+    WHERE academic_id = {$_SESSION['academic']['id']} 
     AND class_id = {$_SESSION['login_class_id']} 
-    AND r.id NOT IN (SELECT restriction_id FROM evaluation_list WHERE academic_id ={$_SESSION['academic']['id']} AND student_id = {$_SESSION['login_id']} ) ");
+    AND r.id NOT IN (
+        SELECT restriction_id 
+        FROM evaluation_list 
+        WHERE academic_id = {$_SESSION['academic']['id']} 
+        AND student_id = {$_SESSION['login_id']}
+    ) 
+    ORDER BY f.lastname ASC, f.firstname ASC");
 
     // Check if there are any pending evaluations
     $has_pending_evaluations = $restriction && $restriction->num_rows > 0;
@@ -51,6 +56,7 @@ if($academic_status == 1) {
     <title>Evaluation Form</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.0.3/src/bold/style.min.css" rel="stylesheet">
     <style>
 
 
@@ -62,7 +68,7 @@ if($academic_status == 1) {
             font-family: 'Montserrat', sans-serif;
             background-color: #f8f9fa;
             color: #333;
-            margin-left: 5px;
+            
         }
 
         
@@ -83,7 +89,7 @@ if($academic_status == 1) {
         }
         .card-header {
             padding: 15px;
-            margin-bottom: 10px;
+            
             border-top-left-radius: 10px !important;
             border-top-right-radius: 10px !important; 
             overflow: hidden; /* Ensure the background image doesn't spill out */
@@ -100,17 +106,29 @@ if($academic_status == 1) {
         .card-header .position-relative {
             z-index: 1; /* Ensures text stays on top */
         }
-        
-        .list-group-item.active {
-            background-color: teal;
-            border-color: #008B8B;
-            border-radius: 10px;
+      
+
+
+        .list-group-item.active:hover {
+          
+    background-color: white;
         }
+
         .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-            font-size: 15px;
+            background-color: teal !important;  /* Changed to teal to match theme */
+            border-color: teal !important;
+            font-size: 16px;
             font-weight: bold;
+            padding: 12px 40px;  /* Increased padding for better presence */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);  /* Added subtle shadow */
+            transition: all 0.3s ease;  /* Smooth transition for hover effects */
+        }
+
+        .btn-primary:hover {
+            background-color: #006d6d !important;  /* Darker teal on hover */
+            border-color: #006d6d !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);  /* Larger shadow on hover */
+            transform: translateY(-1px);  /* Slight lift effect on hover */
         }
         .form-check-input:checked {
             background-color: #28a745;
@@ -119,18 +137,24 @@ if($academic_status == 1) {
         }
         .rating-legend {
             font-size: 1.1rem;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-weight: bold;
             color: #495057;
         }
         .rating-details {
             display: flex;
-            gap: 10px;
+            gap: 15px;
             font-size: 0.9rem;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            justify-content: center;
         }
         .rating-item {
             display: inline-block;
+            padding: 5px 10px;
+            text-align: center;
         }
         .header-text {
             color: teal;
@@ -172,10 +196,16 @@ if($academic_status == 1) {
         .criteria-container {
             border: 1px solid #ddd;
             padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            background-color: #fefefe;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            margin-bottom: 1.5rem !important;
+            transition: background-color 0.2s ease;
+        }
+
+
+        /* Style for error state */
+        .mb-4.has-error {
+            border: 2px solid #dc3545;
+            background-color: #fff8f8;
         }
 
 		.form-label {
@@ -239,20 +269,69 @@ if($academic_status == 1) {
     animation: spin 1s linear infinite;
 }
 
-.formheader{
-    font-weight: bold;
-    color: #00CED1;
+.formheader {
+    font-weight: 700;
     font-size: 2rem;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.5px;
     text-align: center;
+    color: #1a5f7a;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-family: 'Montserrat', sans-serif;
+    position: relative;
+    padding-bottom: 15px;
+    margin-bottom: 5rem;
+}
 
- 
-    
+.formheader:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background-color: #1a5f7a;
+    border-radius: 2px;
 }
-.academic-year{
-    color: #2D2D2D;
+
+.academic-year {
+    color: #505050;
     text-align: center;
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    margin-top: 15px;
 }
+
+.card-header {
+    background: linear-gradient(to right, #ffffff, #f8f9fa);
+    border-bottom: none;
+    padding: 2rem 1.5rem;
+}
+
+.background-cover {
+    position: relative;
+    overflow: hidden;
+    border-radius: 15px 15px 0 0;
+}
+
+.background-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%);
+    z-index: 1;
+}
+
+.position-relative {
+    position: relative;
+    z-index: 2;
+}
+
 .criteria-title{
     font-weight: bold;
     font-size: 1rem;
@@ -277,23 +356,17 @@ if($academic_status == 1) {
     /* Rating Legend Mobile Layout */
     .rating-details {
         flex-direction: column;
-        gap: 5px;
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 8px;
-    }
-    .mobile-select-wrapper {
-        display: block;
-        margin-bottom: 1rem;
-    }
-
-    .evaluation-list {
-        display: none;
+        gap: 8px;
+        padding: 15px;
     }
 
     .rating-item {
-        padding: 5px 0;
+        display: block;
+        width: 100%;
+        padding: 8px 10px;
         border-bottom: 1px solid #dee2e6;
+        text-align: center;
+        margin: 0;
     }
 
     .rating-item:last-child {
@@ -329,25 +402,34 @@ if($academic_status == 1) {
     }
 
     .evaluation-list {
-        display: none; /* Hide the original list on mobile */
+        display: none !important; /* Force hide the original list */
+    }
+
+    .mobile-select-wrapper {
+        display: block !important; /* Force show the wrapper */
     }
 
     .mobile-faculty-select {
-        display: block !important;
-        width: 100%;
-        padding: 0.375rem 0.75rem;
-        font-size: 1rem;
-        font-weight: 400;
-        line-height: 1.5;
-        color: #212529;
-        background-color: #fff;
-        border: 1px solid #ced4da;
-        border-radius: 0.25rem;
-        margin-bottom: 1rem;
+        display: block !important; /* Force show the select element */
     }
 
     .card.sticky-top {
         position: relative !important;
+    }
+
+    /* Add these new styles for mobile header */
+    .formheader {
+        font-size: 1.5rem;  /* Smaller font size for mobile */
+        padding-bottom: 10px;
+    }
+
+    .academic-year {
+        font-size: 0.9rem;  /* Smaller font size for academic year text */
+    }
+
+    .formheader:after {
+        width: 60px;  /* Smaller underline width */
+        height: 2px;  /* Slightly thinner line */
     }
 }
 
@@ -362,7 +444,163 @@ if($academic_status == 1) {
     border-top-right-radius: 8px;
 }
 
+.list-group-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    gap: 12px;
+    text-decoration: none !important;
+    border: none !important;
+    margin-bottom: 0 !important;
+}
 
+.list-group-item.active {
+    border-right: 3px solid teal !important;
+    background-color: white;
+    color: teal;
+    font-weight: bold;
+    margin-bottom: 0 !important;
+}
+
+.list-group-item.active strong {
+    color: teal;  /* Add this to make instructor name teal when active */
+}
+
+.initial-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: #f0f2f5;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;  /* Added letter spacing for initial */
+}
+
+.faculty-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    width: 100%;
+}
+
+.faculty-info strong,
+.faculty-info small {
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    width: 100%;
+    line-height: 1.2;
+}
+
+/* Adjust padding to accommodate wrapped text */
+.list-group-item {
+    padding: 12px 16px !important;
+    min-height: 72px;
+}
+
+/* Keep responsive font sizes */
+@media (max-width: 1400px) {
+    .faculty-info strong {
+        font-size: 14px;
+    }
+    
+    .faculty-info small {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .faculty-info strong {
+        font-size: 13px;
+    }
+    
+    .faculty-info small {
+        font-size: 13px;
+    }
+}
+
+.faculty-info strong {
+    font-size: 16px;
+    line-height: 1.3;
+    letter-spacing: 1px;
+    color: #333;  /* Dark color for faculty name */
+}
+
+.faculty-info small {
+    font-size: 16px;  /* Same size as faculty name */
+    line-height: 1.3;
+    color: #666;      /* Lighter color for subject info - creates hierarchy */
+    letter-spacing: 0.6px;
+}
+
+.list-group-item.active .initial-circle {
+    background-color: #e8f0f1;
+    color: teal;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@media (min-width: 1200px) {
+    .initial-circle {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    
+    .faculty-info strong {
+        font-size: 15px;
+        letter-spacing: 0.25px;
+    }
+    
+    .faculty-info small {
+        font-size: 15px;
+        color: #666;  /* Maintaining lighter color for larger screens */
+        letter-spacing: 0.15px;
+    }
+}
+
+.card-header.text-muted.text-center {
+    border-bottom: 1px solid #dee2e6 !important;
+    padding-bottom: 15px !important;
+    margin-bottom: 10px !important;
+}
+
+.list-group.list-group-flush.evaluation-list {
+    max-height: calc(100vh - 200px); /* Adjust height to leave space for header */
+    overflow-y: auto;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* For Firefox */
+}
+
+/* Webkit scrollbar styling (Chrome, Safari, newer Edge) */
+.list-group.list-group-flush.evaluation-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.list-group.list-group-flush.evaluation-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.list-group.list-group-flush.evaluation-list::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.list-group.list-group-flush.evaluation-list::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Ensure the sticky behavior works properly with scrolling */
+.card.sticky-top {
+    top: 1rem;
+    z-index: 1020;
+}
 
     </style>
 </head>
@@ -413,18 +651,22 @@ if($academic_status == 1) {
             <div class="row">
                 <div class="col-md-3 mb-4">
                     <div class="card sticky-top">
-                        <div class="card-header text-black">
-                            <h5 class="mb-1">Evaluation List</h5>
+                        <div class="card-header text-muted text-center" style="background: none;">
+                            <h5 class="">Evaluation List</h5>
                         </div>
                         <div class="list-group list-group-flush evaluation-list">
                             <?php 
                             while($row = $restriction->fetch_assoc()):
+                                $firstInitial = substr(ucwords($row['faculty']), 0, 1);
                             ?>
                             <a class="list-group-item list-group-item-action <?php echo $rid == $row['id'] ? 'active' : '' ?>" 
                                href="./index.php?page=evaluate&rid=<?php echo $row['id'] ?>&sid=<?php echo $row['sid'] ?>&fid=<?php echo $row['fid'] ?>">
-                                <strong><?php echo ucwords($row['faculty']) ?></strong>
-                                <br>
-                                <small>(<?php echo $row["code"] ?>) <?php echo $row['subject'] ?></small>
+                                <div class="initial-circle"><?php echo $firstInitial ?></div>
+                                <div class="faculty-info">
+                                    <strong><?php echo ucwords($row['faculty']) ?></strong>
+                                    <small><?php echo $row["code"] ?></small>
+                                    <small><?php echo $row['subject'] ?></small>
+                                </div>
                             </a>
                             <?php endwhile; ?>
                         </div>
@@ -434,13 +676,13 @@ if($academic_status == 1) {
                     <div class="card">
                         <?php if(empty($rid)): ?>
                             <div class="no-evaluation-message">
-                                <i class="fas fa-clipboard-list"></i>
+                                <i class="ph ph-clipboard-text ph-bold"></i>
                                 <h4>No Evaluation Selected</h4>
                                 <p>Please select an evaluation from the list on the left to begin the assessment.</p>
                             </div>
                         <?php else: ?>
                             <div class="cardtitle">
-    <div class="card-header bg-body text-black position-relative background-cover">
+    <div class="card-header bg-body position-relative background-cover">
         <div class="position-absolute top-0 end-0 opacity-10">
             <img src="./logo/ctu-building3.png" alt="Background Logo" />
         </div>
@@ -502,7 +744,7 @@ if($academic_status == 1) {
                                         <textarea name="comment" id="comment" rows="4" class="form-control"></textarea>
                                     </div>
                                     <div class="text-center mt-4">
-                                        <button type="submit" class="btn btn-primary btn-lg" disabled>Submit Evaluation</button>
+                                        <button type="submit" class="btn btn-primary btn-lg">Submit Evaluation</button>
                                     </div>
                                 </form>
                             </div>
@@ -519,7 +761,7 @@ if($academic_status == 1) {
    $(document).ready(function() {
     // Create mobile faculty dropdown
     function createMobileFacultyDropdown() {
-        // Only create if evaluation list exists and mobile dropdown doesn't
+        console.log('Creating mobile dropdown...');
         if ($('.evaluation-list').length && !$('.mobile-faculty-select').length) {
             // Create select element with Bootstrap styling
             let select = $('<select>', {
@@ -550,17 +792,20 @@ if($academic_status == 1) {
             $('.evaluation-list .list-group-item-action').each(function() {
                 let href = $(this).attr('href');
                 let facultyName = $(this).find('strong').text().trim();
-                let subjectInfo = $(this).find('small').text().trim();
+                let subjectCode = $(this).find('small:first').text().trim();
+                let subjectName = $(this).find('small:last').text().trim();
                 let isSelected = $(this).hasClass('active');
                 
-                // Create formatted option text
-                let optionText = `${facultyName} | ${subjectInfo}`;
+                // Format the option text with line breaks
+                let optionText = `${facultyName}\n${subjectCode} - ${subjectName}`;
                 
-                select.append($('<option>', {
+                let option = $('<option>', {
                     value: href,
                     text: optionText,
                     selected: isSelected
-                }));
+                });
+                
+                select.append(option);
             });
 
             // Assemble the wrapper with label and select
@@ -585,10 +830,10 @@ if($academic_status == 1) {
             // Handle responsive behavior
             function handleResponsiveDisplay() {
                 if (window.innerWidth <= 767.98) {
-                    $('.evaluation-list').hide();
+                    $('.evaluation-list').addClass('mobile-hidden');
                     wrapper.show();
                 } else {
-                    $('.evaluation-list').show();
+                    $('.evaluation-list').removeClass('mobile-hidden');
                     wrapper.hide();
                 }
             }
@@ -681,12 +926,21 @@ if($academic_status == 1) {
             url: 'ajax.php?action=save_evaluation',
             method: 'POST',
             data: $('#manage-evaluation').serialize(),
-            dataType: 'json',
-            success: function(resp) {
-                if (resp.status === 'success') {
+            success: function(response) {
+                // Parse response if it's a string
+                let resp = response;
+                try {
+                    if (typeof response === 'string') {
+                        resp = JSON.parse(response);
+                    }
+                } catch (e) {
+                    console.log("Response parsing error:", e);
+                }
+
+                // Check if submission was successful (1 indicates success)
+                if (resp == 1 || resp.status == 'success') {
                     $(document).trigger('evaluationSubmitted');
                     
-                    validateEvaluationAccess();
                     let nextEvaluationLink = getNextEvaluation(currentRid);
 
                     if (nextEvaluationLink) {
@@ -718,16 +972,65 @@ if($academic_status == 1) {
                     });
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.log("AJAX Error:", status, error);
                 Swal.fire({
                     title: 'Error!',
-                    text: 'An error occurred while saving the evaluation.',
+                    text: 'An error occurred while saving the evaluation. Please try again.',
                     icon: 'error',
                     confirmButtonText: 'OK'
                 });
             }
         });
     }
+
+    // Function to save form data to localStorage
+    function saveFormData() {
+        const formData = {};
+        $('#manage-evaluation input[type="radio"]:checked').each(function() {
+            formData[$(this).attr('name')] = $(this).val();
+        });
+        
+        // Save comment as well
+        formData['comment'] = $('#comment').val();
+        
+        // Save to localStorage with a unique key based on the evaluation ID
+        const rid = $('input[name="restriction_id"]').val();
+        localStorage.setItem(`evaluation_${rid}`, JSON.stringify(formData));
+    }
+
+    // Function to load saved form data
+    function loadFormData() {
+        const rid = $('input[name="restriction_id"]').val();
+        const savedData = localStorage.getItem(`evaluation_${rid}`);
+        
+        if (savedData) {
+            const formData = JSON.parse(savedData);
+            
+            // Restore radio button selections
+            Object.entries(formData).forEach(([key, value]) => {
+                if (key === 'comment') {
+                    $('#comment').val(value);
+                } else {
+                    $(`input[name="${key}"][value="${value}"]`).prop('checked', true);
+                }
+            });
+        }
+    }
+
+    // Save form data when radio buttons change or comment is updated
+    $(document).on('change', 'input[type="radio"]', saveFormData);
+    $(document).on('input', '#comment', saveFormData);
+
+    // Clear saved data after successful submission
+    $(document).on('evaluationSubmitted', function() {
+        const rid = $('input[name="restriction_id"]').val();
+        localStorage.removeItem(`evaluation_${rid}`);
+    });
+
+    // Load saved data when page loads
+    loadFormData();
+
     // Form submission handler
     $('#manage-evaluation').on('submit', function(e) {
         e.preventDefault();
@@ -763,6 +1066,9 @@ if($academic_status == 1) {
             confirmButtonText: 'Yes, submit it!'
         }).then((result) => {
             if (result.isConfirmed) {
+                // Clear saved data before submitting
+                const rid = $('input[name="restriction_id"]').val();
+                localStorage.removeItem(`evaluation_${rid}`);
                 submitEvaluation();
             }
         });

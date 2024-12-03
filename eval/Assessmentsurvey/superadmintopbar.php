@@ -88,7 +88,7 @@
         <li class="nav-item">
             <a class="navbar-brand" href="./">
          
-                <span class="login-name"></span>SuperAdmin
+                <span class="login-name"></span>
                 <span class="section-name">
                     <?php echo isset($page_title) ? $page_title : ''; ?> 
                 </span>

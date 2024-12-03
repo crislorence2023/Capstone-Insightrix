@@ -1,53 +1,77 @@
+<!-- Sidebar Component -->
 <aside class="main-sidebar sidebar-light-primary elevation-4">
-    <div class="dropdown">
-        <a href="./" class="brand-link">
-            <div class="brand-wrapper">
-                <img src="./logo/Evalucator.png" alt="Evalucator Logo" class="brand-image">
-                <span class="brand-title"><b>Instructor</b></span>
-            </div>
-        </a>
-    </div>
+    <!-- Brand Logo -->
+    <a href="./" class="brand-link">
+        <div class="brand-wrapper">
+            <img src="logo/Evalucator.png" alt="Evalucator Logo" class="brand-image">
+            <span class="brand-title"><b>Instructor</b></span>
+        </div>
+    </a>
+
+    <!-- Sidebar -->
     <div class="sidebar">
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column nav-flat" data-widget="treeview" role="menu" data-accordion="false">
-                <li class="nav-item dropdown">
+
+
+                <!-- Dashboard -->
+                <li class="nav-item">
                     <a href="./" class="nav-link nav-home">
-                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <i class="ri-home-line"></i>
                         <p>Dashboard</p>
                     </a>
                 </li>
-                <li class="nav-item dropdown">
-                    <a href="./index.php?page=result" class="nav-link nav-result">
-                        <i class="nav-icon fas fa-th-list"></i>
-                        <p>Evaluation Result</p>
+
+                <li class="nav-item">
+                    <a href="./index.php?page=result" class="nav-link nav-evaluation-status">
+                        <i class="ri-file-text-line"></i>
+                        <p>Results</p>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="./index.php?page=StudentList" class="nav-link nav-evaluation-completed">
+                        <i class="ri-checkbox-circle-line"></i>
+                        <p>Student List</p>
+                    </a>
+                </li>
+
+             
+
             </ul>
         </nav>
     </div>
 </aside>
 
 <style>
-/* Main Sidebar Container */
-.main-sidebar {
-    font-family: 'Montserrat', sans-serif;
-    background-color: #FFFFFF;
-    border-right: 1px solid #e2e8f0;
-    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border-bottom-right-radius: 15px;
-    border-top-right-radius: 20px;
+:root {
+    --primary-gradient: linear-gradient(135deg, #4A90E2, #50E3C2);
+    --sidebar-bg: #FFFFFF;
+    --text-color: #191919;
+    --border-color: #e2e8f0;
+    --hover-transition: 0.3s ease;
 }
 
-/* Brand Link and Logo Styles */
+.main-sidebar {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+b, strong {
+    font-weight: bold !important;
+}
+
+/* Brand Styles */
 .brand-link {
-    position: relative;
+    font-weight: 500;
     padding: 0.8rem 1rem;
-    border-bottom: 1px solid #e2e8f0;
-    background-color: #FFFFFF !important;
-    transition: all 0.3s ease;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--sidebar-bg) !important;
     text-decoration: none;
-    border-top-right-radius: 20px;
+    color: #333333;
+    
 }
 
 .brand-wrapper {
@@ -57,65 +81,109 @@
 }
 
 .brand-image {
-    display: block !important;
     width: 40px;
     height: 40px;
-    transition: all 0.3s ease;
     object-fit: contain;
 }
 
 .brand-title {
-    font-size: 1.5rem;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    color: #191919;
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--text-color);
+    letter-spacing: 0.05rem;
 }
 
-/* Sidebar General Styles */
+.brand-title b {
+    font-weight: 600 !important;
+    font-size: 1.3rem;
+  
+    color: var(--text-color);
+    letter-spacing: 0.05rem;
+}
+
+
+/* Sidebar Navigation */
 .sidebar {
+    margin: 5px;
     padding-top: 10px;
 }
 
-/* Navigation Items Styling */
 .nav-sidebar .nav-item {
     margin-bottom: 0.5rem;
 }
 
 .nav-sidebar .nav-link {
-    color: #191919 !important;
+    color: #333333 !important;
     border-radius: 10px;
-    box-shadow: none !important;
-    transition: background-color 0.3s ease, color 0.3s ease;
     padding: 0.75rem 1rem;
     display: flex;
     align-items: center;
-    margin-left: 5px;
-    margin-right: 5px;
+    padding-left: 1rem;
+    gap: 12px;
+    border: 1px solid transparent;
+    height: 3rem;
+    
+}
+
+.nav-sidebar .nav-link .right {
+    margin-left: auto;
+    font-size: 0.8rem;
+    display: block !important;
 }
 
 .nav-sidebar .nav-link i {
-    color: #191919 !important;
-    margin-right: 0.5rem;
-    font-size: 1.1rem;
-    transition: color 0.3s ease;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    color: #333333;
+    font-weight: 300;
+    opacity: 0.85;
+    transform: none;
 }
 
-/* Hover and Active States */
-.nav-sidebar .nav-link:hover,
-.nav-sidebar .nav-link.active {
+/* Hover & Active States */
+.nav-sidebar .nav-link:hover:not(.menu-open > .nav-link),
+.nav-sidebar .nav-link.active:not(.menu-open > .nav-link),
+.nav-sidebar .nav-link.nav-classroom_view.active,
+.nav-sidebar .nav-link.nav-live_classroom_view.active,
+.nav-sidebar .nav-link.nav-sidebar_room.active,
+.nav-sidebar .nav-link.nav-evaluation-status.active,
+.nav-sidebar .nav-link.nav-new-nav-link.active {
     background: #f9f9f9 !important;
-    border: 1px solid #d3d3d3 !important;
-    color: #333 !important;
-    border-radius: 10px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #b8c6d1 !important;
+    color: #333333 !important;
+    border-radius: 8px;
+    box-shadow: none !important;
 }
 
-.nav-sidebar .nav-link:hover i,
-.nav-sidebar .nav-link.active i {
-    color: teal !important;
+/* Icon active states */
+.nav-sidebar .nav-link:hover:not(.menu-open > .nav-link) i,
+.nav-sidebar .nav-link.active:not(.menu-open > .nav-link) i,
+.nav-sidebar .nav-link.nav-classroom_view.active i,
+.nav-sidebar .nav-link.nav-live_classroom_view.active i,
+.nav-sidebar .nav-link.nav-sidebar_room.active i,
+.nav-sidebar .nav-link.nav-evaluation-status.active i,
+.nav-sidebar .nav-link.nav-new-nav-link.active i {
+    color: #333333 !important;
+    opacity: 1;
+    font-size: 1.5rem;
+    transform: none;
 }
 
-/* Collapsed Sidebar States */
+/* Treeview Styles */
+.nav-treeview {
+    padding: 8px 0;
+    margin-left: 1rem;
+}
+
+.nav-treeview .nav-item {
+    margin-bottom: 8px;
+}
+
+.nav-treeview .nav-link {
+    padding-left: 2.5rem;
+}
+
+/* Collapsed State */
 .sidebar-collapse .main-sidebar {
     margin-left: -250px;
 }
@@ -133,59 +201,12 @@
     display: none;
 }
 
-/* Hover Effects for Collapsed Sidebar */
-.sidebar-collapse .brand-link:hover .brand-wrapper {
-    position: relative;
+/* Add this new rule to hide section labels when collapsed */
+.sidebar-collapse .sidebar p[style*="color: #333333"] {
+    display: none;
 }
 
-.sidebar-collapse .brand-link:hover .brand-title {
-    display: block;
-    position: absolute;
-    left: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    background-color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0 4px 4px 0;
-    box-shadow: 4px 0 8px rgba(0, 0, 0, 0.1);
-    white-space: nowrap;
-    z-index: 1000;
-}
-
-/* Enhanced Hover Effects */
-.nav-link:hover {
-    transform: translateX(2px);
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .main-sidebar {
-        margin-left: -250px;
-    }
-
-    .sidebar-open .main-sidebar {
-        margin-left: 0;
-    }
-
-    .brand-wrapper {
-        justify-content: flex-start;
-    }
-    
-    .brand-image {
-        width: 30px;
-        height: 30px;
-    }
-    
-    .brand-title {
-        font-size: 1.2rem;
-    }
-
-    .nav-sidebar .nav-link {
-        padding: 0.5rem 0.75rem;
-    }
-}
-
-/* Accessibility Improvements */
+/* Accessibility */
 .nav-link:focus {
     outline: 2px solid #4A90E2;
     outline-offset: 2px;
@@ -195,19 +216,9 @@
     outline: none;
 }
 
-/* Smooth Scrolling for Sidebar */
-.sidebar {
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-}
-
 /* Custom Scrollbar */
 .sidebar::-webkit-scrollbar {
     width: 6px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: transparent;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
@@ -218,54 +229,117 @@
 .sidebar::-webkit-scrollbar-thumb:hover {
     background: rgba(0,0,0,0.3);
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-sidebar,
+    .sidebar {
+        margin-left: 10px;
+    }
+    
+    .brand-image {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .brand-title {
+        font-size: 1.2rem;
+    }
+    
+    .nav-sidebar .nav-link {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .nav-treeview {
+        margin-left: 0.5rem;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --sidebar-bg: #1a1a1a;
+        --text-color: #ffffff;
+        --border-color: #333;
+    }
+}
+
+
+.sidebar-dark-primary .nav-sidebar>.nav-item>.nav-link.active, .sidebar-light-primary .nav-sidebar>.nav-item>.nav-link.active {
+    /* Even lighter grey version of the sidebar active state */
+background-color: #dee2e6; /* Very light grey shade */
+color: #fff; /* Keep text color white */
+border-radius: 10px;
+}
+
+
 </style>
 
 <script>
-$(document).ready(function(){
-    var page = '<?php echo isset($_GET['page']) ? $_GET['page'] : 'home' ?>';
-    var s = '<?php echo isset($_GET['s']) ? $_GET['s'] : '' ?>';
-    if(s!='')
-        page = page+'_'+s;
-    if($('.nav-link.nav-'+page).length > 0){
-        $('.nav-link.nav-'+page).addClass('active')
-        if($('.nav-link.nav-'+page).hasClass('tree-item') == true){
-            $('.nav-link.nav-'+page).closest('.nav-treeview').siblings('a').addClass('active')
-            $('.nav-link.nav-'+page).closest('.nav-treeview').parent().addClass('menu-open')
-        }
-        if($('.nav-link.nav-'+page).hasClass('nav-is-tree') == true){
-            $('.nav-link.nav-'+page).parent().addClass('menu-open')
-        }
-    }
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent default scroll behavior on nav links
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            // Only prevent default if it's not an external link
+            if (this.getAttribute('href').startsWith('./')) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                window.location.replace(href); // Use replace instead of href to prevent scroll
+            }
+        });
+    });
 
-    function toggleSidebar() {
-        $('body').toggleClass('sidebar-collapse');
-        $('body').toggleClass('sidebar-open');
+    // Get current page from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const page = urlParams.get('page') || 'home';
+    
+    // Map of special page cases
+    const pageMapping = {
+        'Classroom': 'classroom_view',
+        'LiveClassroom': 'live_classroom_view',
+        'Room': 'sidebar_room',
+        'evaluate': 'evaluation-status',
+        'Completed Eval': 'evaluation-completed',
+        'result': 'evaluation-status',
+        'StudentList': 'evaluation-completed'
+    };
+    
+    // Get the correct identifier based on the mapping or use the original page
+    const pageIdentifier = pageMapping[page] || page;
+    
+    // Find and activate current page link
+    const currentLink = document.querySelector(`.nav-link.nav-${pageIdentifier}`);
+    
+    if (currentLink) {
+        currentLink.classList.add('active');
         
-        // Force a re-flow to ensure proper rendering
-        $('.main-sidebar').hide().show(0);
-    }
-
-    // Hamburger menu click event
-    $('[data-widget="pushmenu"]').on('click', function(e) {
-        e.preventDefault();
-        toggleSidebar();
-    });
-
-    // Check and set initial state
-    function checkSidebarState() {
-        if ($(window).width() <= 768) {
-            $('body').addClass('sidebar-collapse');
-        } else {
-            $('body').removeClass('sidebar-collapse');
+        // Handle tree view items
+        if (currentLink.classList.contains('tree-item')) {
+            const parentTreeview = currentLink.closest('.nav-treeview');
+            if (parentTreeview) {
+                const parentLink = parentTreeview.previousElementSibling;
+                const parentItem = parentTreeview.parentElement;
+                
+                parentLink.classList.add('active');
+                parentItem.classList.add('menu-open');
+            }
+        }
+        
+        // Handle menu items with tree view
+        if (currentLink.classList.contains('nav-is-tree')) {
+            currentLink.parentElement.classList.add('menu-open');
         }
     }
-
-    // Run on page load
-    checkSidebarState();
-
-    // Run on window resize
-    $(window).resize(function() {
-        checkSidebarState();
-    });
+    
+    // Hamburger menu functionality
+    const menuToggle = document.querySelector('[data-widget="pushmenu"]');
+    if (menuToggle) {
+        menuToggle.addEventListener('click', function() {
+            document.body.classList.toggle('sidebar-collapse');
+        });
+    }
 });
 </script>
+
+<link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">

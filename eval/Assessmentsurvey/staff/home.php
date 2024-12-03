@@ -1,5 +1,4 @@
 <?php include('db_connect.php'); ?>
-
 <?php 
 function ordinal_suffix($num){
     $num = $num % 100;
@@ -12,144 +11,188 @@ function ordinal_suffix($num){
     }
     return $num.'th';
 }
-
 $astat = array("Not Yet Started","On-going","Closed");
-
-// Check and set academic session if not set
-if(!isset($_SESSION['academic'])) {
-    $academic = $conn->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
-    if($academic) {
-        $_SESSION['academic'] = array(
-            'id' => $academic['id'],
-            'year' => $academic['year'],
-            'semester' => $academic['semester'],
-            'status' => $academic['status']
-        );
-    } else {
-        // If no default is set, get the latest academic year
-        $academic = $conn->query("SELECT * FROM academic_list ORDER BY id DESC LIMIT 1")->fetch_assoc();
-        if($academic) {
-            $_SESSION['academic'] = array(
-                'id' => $academic['id'],
-                'year' => $academic['year'],
-                'semester' => $academic['semester'],
-                'status' => $academic['status']
-            );
-        } else {
-            // Fallback if no academic year exists
-            $_SESSION['academic'] = array(
-                'id' => 0,
-                'year' => 'No Academic Year Set',
-                'semester' => 0,
-                'status' => 0
-            );
-        }
-    }
-}
 ?>
 
-<div class="container-fluid">
-  <div class="col-12">
-    <div class="card bg-teal-700 text-white mb-4">
-      <div class="card-body">
-        <h5 class="font-weight-bold">Academic Year: <?php echo $_SESSION['academic']['year'].' '.(ordinal_suffix($_SESSION['academic']['semester'])) ?> Semester</h5>
-        <h6 class="mb-0">Evaluation Status: <?php echo $astat[$_SESSION['academic']['status']] ?></h6>
-      </div>
+<div class="dashboard-container">
+    <!-- Header Section -->
+    <div class="header-card">
+        <div class="header-content">
+            <div class="semester-info">
+                <h4>Academic Year</h4>
+                <h2><?php echo $_SESSION['academic']['year'].' '.(ordinal_suffix($_SESSION['academic']['semester'])) ?> Semester</h2>
+            </div>
+            <div class="status-badge <?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])) ?>">
+                <?php echo $astat[$_SESSION['academic']['status']] ?>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="row">
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="small-box shadow-sm border">
-        <div class="inner">
-          <h3><?php echo $conn->query("SELECT * FROM faculty_list")->num_rows; ?></h3>
-          <p>Total Faculties</p>
+    <!-- Stats Container -->
+    <div class="stats-container">
+        <div class="stat-card students">
+            <div class="stat-content">
+                <div class="stat-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="stat-details">
+                    <h3><?php echo $conn->query("SELECT * FROM student_list")->num_rows; ?></h3>
+                    <p>Students</p>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <a href="./index.php?page=student_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
+            </div>
         </div>
-        <div class="icon">
-          <i class="fas fa-user-tie"></i>
+
+        <div class="stat-card classes">
+            <div class="stat-content">
+                <div class="stat-icon">
+                    <i class="fas fa-chalkboard"></i>
+                </div>
+                <div class="stat-details">
+                    <h3><?php echo $conn->query("SELECT * FROM class_list")->num_rows; ?></h3>
+                    <p>Active Classes</p>
+                </div>
+            </div>
+            <div class="stat-footer">
+                <a href="./index.php?page=class_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
+            </div>
         </div>
-      </div>
     </div>
-    
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="small-box shadow-sm border">
-        <div class="inner">
-          <h3><?php echo $conn->query("SELECT * FROM student_list")->num_rows; ?></h3>
-          <p>Total Students</p>
-        </div>
-        <div class="icon">
-          <i class="fas fa-user-graduate"></i>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="small-box shadow-sm border">
-        <div class="inner">
-          <h3><?php echo $conn->query("SELECT * FROM users")->num_rows; ?></h3>
-          <p>Total Users</p>
-        </div>
-        <div class="icon">
-          <i class="fas fa-users"></i>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-12 col-sm-6 col-md-3">
-      <div class="small-box shadow-sm border">
-        <div class="inner">
-          <h3><?php echo $conn->query("SELECT * FROM class_list")->num_rows; ?></h3>
-          <p>Total Classes</p>
-        </div>
-        <div class="icon">
-          <i class="fas fa-chalkboard"></i>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
-
 <style>
-  .container-fluid{
-  
-  }
-.small-box {
-  position: relative;
-  padding: 20px;
-  margin-bottom: 20px;
-  border-radius: 5px;
-  background-color: #FAFEFF;
+.dashboard-container {
+    padding: 2rem;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.small-box .inner {
-  padding: 10px;
+.header-card {
+    background: linear-gradient(135deg, #2193b0, #6dd5ed);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.small-box .icon {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 40px;
-  color: rgba(0,0,0,0.15);
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
 }
 
-.small-box h3 {
-  font-size: 38px;
-  font-weight: bold;
-  margin: 0 0 10px 0;
-  white-space: nowrap;
-  padding: 0;
+.semester-info h4 {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1rem;
 }
 
-.small-box p {
-  font-size: 15px;
-  margin-bottom: 0;
+.semester-info h2 {
+    margin: 0.5rem 0 0 0;
+    font-size: 1.8rem;
+    font-weight: 600;
 }
 
-.bg-teal-700 {
-  background: linear-gradient(135deg, #FF8C00, #FF4500);
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.2);
+}
 
+.status-badge.not-yet-started { background-color: #ffd700; color: #000; }
+.status-badge.on-going { background-color: #00ff7f; color: #000; }
+.status-badge.closed { background-color: #ff6b6b; color: white; }
 
+.stats-container {
+    margin-top: 2rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.5rem;
+}
+
+.faculty .stat-icon { background-color: #e3f2fd; color: #1976d2; }
+.students .stat-icon { background-color: #f3e5f5; color: #7b1fa2; }
+.users .stat-icon { background-color: #e8f5e9; color: #388e3c; }
+.classes .stat-icon { background-color: #fff3e0; color: #f57c00; }
+
+.stat-details h3 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.stat-details p {
+    margin: 0.25rem 0 0 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.stat-footer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.view-details {
+    text-decoration: none;
+    color: #666;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    transition: color 0.2s;
+}
+
+.view-details:hover {
+    color: #2193b0;
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+    
+    .stats-container {
+        gap: 1rem;
+    }
 }
 </style>

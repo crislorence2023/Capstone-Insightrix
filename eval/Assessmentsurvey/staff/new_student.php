@@ -1,7 +1,22 @@
 <?php
 ?>
+<style>
+*{
+	margin: 0;
+	padding: 0;
+}
+.header{
+	margin-left: 1rem;
+	font-size: 1.5rem;
+}
+
+
+
+	</style>
 <div class="col-lg-12">
+<p class="header">Add New Student</p>
 	<div class="card">
+	
 		<div class="card-body">
 			<form action="" id="manage_student">
 				<input type="hidden" name="id" value="<?php echo isset($id) ? $id : '' ?>">
@@ -9,7 +24,7 @@
 					<div class="col-md-6 border-right">
 						<div class="form-group">
 							<label for="" class="control-label">School ID</label>
-							<input type="text" name="school_id" class="form-control form-control-sm" required value="<?php echo isset($school_id) ? $school_id : '' ?>">
+							<input type="text" name="school_id" class="form-control form-control-sm" required value="<?php echo isset($school_id) ? $school_id : '' ?>" id="school_id">
 						</div>
 						<div class="form-group">
 							<label for="" class="control-label">First Name</label>
@@ -24,7 +39,7 @@
 							<select name="class_id" id="class_id" class="form-control form-control-sm select2" required>
 								<option value=""></option>
 								<?php 
-								$classes = $conn->query("SELECT id, concat(curriculum,' ',level,' - ',section) as class, department FROM class_list");
+								$classes = $conn->query("SELECT id, concat(curriculum,' ',level,' - ',section) as class, department FROM class_list WHERE department = 'COT'");
 								while($row=$classes->fetch_assoc()):
 								?>
 								<option value="<?php echo $row['id'] ?>" data-department="<?php echo $row['department'] ?>" <?php echo isset($class_id) && $class_id == $row['id'] ? "selected" : "" ?>><?php echo $row['class'] ?></option>
@@ -32,8 +47,11 @@
 							</select>
 						</div>
 						<div class="form-group">
-							<label for="" class="control-label">Department</label>
-							<input type="text" name="department" id="department" class="form-control form-control-sm" readonly value="<?php echo isset($department) ? $department : '' ?>">
+							<label for="" class="control-label">Department</label><br>
+							<select name="department" id="department" class="form-control form-control-sm select2">
+								<option value="COT">College of Technology (COT)</option>
+								
+							</select>
 						</div>
 						<div class="form-group">
 							<label for="" class="control-label">Avatar</label>
@@ -54,12 +72,13 @@
 						</div>
 						<div class="form-group">
 							<label class="control-label">Password</label>
-							<input type="password" class="form-control form-control-sm" name="password" <?php echo !isset($id) ? "required":'' ?>>
-							<small><i><?php echo isset($id) ? "Enter a new password only if you want to change it. Leave blank to keep the current password." : "Default password is 'eval2024'. Please change it after first login." ?></i></small>
+							<input type="password" class="form-control form-control-sm" name="password" id="password" <?php echo !isset($id) ? "required":'' ?> readonly>
+							<small><i>Password is automatically set to the Student ID</i></small>
 						</div>
 						<div class="form-group">
 							<label class="label control-label">Confirm Password</label>
-							<input type="password" class="form-control form-control-sm" name="cpass" <?php echo !isset($id) ? 'required' : '' ?>>
+							<input type="password" class="form-control form-control-sm" name="cpass" id="cpass" <?php echo !isset($id) ? 'required' : '' ?> readonly>
+							<small><i>Password is automatically set to the Student ID</i></small>
 							<small id="pass_match" data-status=''></small>
 						</div>
 					</div>
@@ -82,19 +101,20 @@
 	}
 </style>
 <script>
-	$('[name="password"],[name="cpass"]').keyup(function(){
-		var pass = $('[name="password"]').val()
-		var cpass = $('[name="cpass"]').val()
-		if(cpass == '' ||pass == ''){
-			$('#pass_match').attr('data-status','')
-		}else{
-			if(cpass == pass){
-				$('#pass_match').attr('data-status','1').html('<i class="text-success">Password Matched.</i>')
-			}else{
-				$('#pass_match').attr('data-status','2').html('<i class="text-danger">Password does not match.</i>')
-			}
+	// Auto-fill password fields when school ID changes
+	$('#school_id').on('input', function() {
+		var schoolId = $(this).val();
+		$('#password').val(schoolId);
+		$('#cpass').val(schoolId);
+		
+		// Trigger password match check
+		if(schoolId) {
+			$('#pass_match').attr('data-status','1').html('<i class="text-success">Password Matched.</i>');
+		} else {
+			$('#pass_match').attr('data-status','').html('');
 		}
-	})
+	});
+
 	function displayImg(input,_this) {
 	    if (input.files && input.files[0]) {
 	        var reader = new FileReader();
@@ -105,24 +125,18 @@
 	        reader.readAsDataURL(input.files[0]);
 	    }
 	}
+
 	$('#class_id').change(function(){
 		var department = $('#class_id option:selected').data('department');
 		$('#department').val(department);
 	});
+
 	$('#manage_student').submit(function(e){
 		e.preventDefault()
 		$('input').removeClass("border-danger")
 		start_load()
 		$('#msg').html('')
-		if($('[name="password"]').val() != '' && $('[name="cpass"]').val() != ''){
-			if($('#pass_match').attr('data-status') != 1){
-				if($("[name='password']").val() !=''){
-					$('[name="password"],[name="cpass"]').addClass("border-danger")
-					end_load()
-					return false;
-				}
-			}
-		}
+		
 		$.ajax({
 			url:'ajax.php?action=save_student',
 			data: new FormData($(this)[0]),
