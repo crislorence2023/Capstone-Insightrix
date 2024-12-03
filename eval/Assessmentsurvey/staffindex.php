@@ -19,7 +19,7 @@
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">
 <div class="wrapper">
     <?php include 'stafftopbar.php' ?>
-    <?php include 'staff/sidebar-cot.php' ?>  <!-- Hardcoded to staff sidebar -->
+    <?php include 'staff/sidebar.php' ?>  <!-- Hardcoded to staff sidebar -->
 
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper" style="background-color: #FAFEFF;">
@@ -43,75 +43,11 @@
         <section class="content">
             <div class="container-fluid">
                 <?php 
-                    // Define whitelist based on all navigation links in the sidebar
-                    $whitelist = [
-                        // General Section
-                        'home',
-                        'evaluation-status',
-                        'Room',
-                        
-                        // Academic Section
-                        'subject_list',
-                        'class_list',
-                        
-                        // Faculty Section
-                        'new_faculty',
-                        'faculty_list',
-                        
-                        // Student Section
-                        'new_student',
-                        'student_list',
-                        
-                        // Assignment Section
-                        'AssignClassSubjects'
-                    ];
-                    
-                    $blacklist = [
-
-                        '../',          // Block directory traversal attempts
-                        'config',       // Block access to configuration files
-                        'log',          // Block access to log files
-                        'tmp',          // Block access to temporary files
-                        'cache',        // Block access to cache files
-                        '.php',         // Block direct PHP file access attempts
-                        '.ini',         // Block access to ini files
-                        '.env',         // Block access to environment files
-                        'backup',       // Block access to backup files
-                        'admin',        // Block direct admin directory access
-                        'includes',     // Block access to includes directory
-                        'upload',       // Block direct access to upload directory
-                        'system',       // Block access to system files
-                        'database',     // Block database related files
-                        'sql',          // Block SQL files
-                        'install',      // Block installation files
-                        'setup',        // Block setup files
-                        'phpinfo',      // Block phpinfo access
-                        'shell',        // Block shell access
-                        'cmd',          // Block command execution
-                        'exec' ,         // Block execution attempts
-                        'closed',
-                'Completed Eval',
-                'done',
-                'evaluate',
-                
-                'topbar',
-                'closed',
-                'done',
-                'result',
-                'StudentList',
-                    ]; // Add any pages you want to block here
-
                     $page = isset($_GET['page']) ? $_GET['page'] : 'home';
-
-                    // Check if the page is in the whitelist and not in the blacklist
-                    if(in_array($page, $whitelist) && !in_array($page, $blacklist)) {
-                        if(!file_exists('staff/'.$page.".php")){
-                            include '404.html';
-                        } else {
-                            include 'staff/'.$page.'.php';
-                        }
+                    if(!file_exists('staff/'.$page.".php")){
+                        include '404.html';
                     } else {
-                        include '404.html'; // Show 404 if page is not allowed
+                        include 'staff/'.$page.'.php';
                     }
                 ?>
             </div>

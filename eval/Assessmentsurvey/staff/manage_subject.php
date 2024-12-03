@@ -26,12 +26,14 @@ $dept_qry = $conn->query("SELECT * FROM department_list ORDER BY name ASC");
 		</div>
 		<div class="form-group">
             <label for="department" class="control-label">Department</label>
-         
-    <select class="form-control form-control-sm" name="department" id="department" required>
-        <option value="COT" selected>COT</option>
-        <option value="">Select Department</option>
-        <!-- Other department options can be added here if needed -->
-    </select>
+            <select class="form-control form-control-sm" name="department" id="department" required>
+                <option value="">Select Department</option>
+                <?php while($row = $dept_qry->fetch_assoc()): ?>
+                    <option value="<?php echo $row['name'] ?>" <?php echo isset($department) && $department == $row['name'] ? 'selected' : '' ?>>
+                        <?php echo strtoupper($row['name']) ?>
+                    </option>
+                <?php endwhile; ?>
+            </select>
         </div>
 	</form>
 </div>

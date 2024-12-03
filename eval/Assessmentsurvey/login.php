@@ -22,7 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
 
-<link rel="icon" href="logo/evalucator-nobg2.png" type="image/x-icon">
+<link rel="icon" href="./logo/evalucator-nobg2.png" type="image/x-icon">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
 
@@ -194,7 +194,7 @@
             margin-bottom: 1rem;
             font-size: 15px;
             letter-spacing: 0.5px;
-           
+            height: 1.5rem;
             animation: fadeIn 0.05s ease-in-out;
             
         }
@@ -283,24 +283,19 @@
 
 @media screen and (max-width: 768px) {
     .login-container {
-        width: 65%;
-        max-width: 350px;
-        padding: 20px;
-        margin: 0 auto;
-        box-sizing: border-box;
+        width: 90%;
+        padding: 100px;
     }
 
     h1 {
-        font-size: 2rem;
+        font-size: 1.5rem;
         text-align: center;
         margin-bottom: 1.5rem;
     }
 
     input, button, select {
-        width: 100%;
-        height: 2.6rem;
-        font-size: 13px;
-        box-sizing: border-box;
+        height: 2.8rem;
+        font-size: 14px;
     }
 
     .password-container .toggle-password {
@@ -319,7 +314,7 @@
         font-size: 0.9rem;
     }
     .terms {
-        font-size: 0.7rem;
+        font-size: 0.9rem;
         margin-top: 3rem;
         text-align: center;
     }
@@ -352,14 +347,12 @@ input-group1 {
 
 @media screen and (max-width: 480px) {
     .login-container {
-        width: 70%;
-        max-width: 300px;
-        padding: 15px;
-        box-sizing: border-box;
+        width: 95%;
+        padding: 60px;
     }
 
     h1 {
-        font-size: 1.8rem;
+        font-size: 1.3rem;
         margin-bottom: 1.5rem;
     }
 
@@ -381,7 +374,7 @@ input-group1 {
     }
 
     .terms {
-        font-size: 0.7rem;
+        font-size: 0.9rem;
         margin-top: 3rem;
         text-align: center;
     }
@@ -410,65 +403,21 @@ input-group1 {
 
 @media screen and (max-width: 320px) {
     .login-container {
-        width: 75%;
-        max-width: 280px;
-        padding: 15px;
+        width: 100%;
+        padding: 20px;
     }
 
     h1 {
-        font-size: 1.6rem;
+        font-size: 1.2rem;
     }
 
     .request-account {
         font-size: 0.8rem;
     }
     .terms {
-        font-size: 0.7rem;
+        font-size: 0.9rem;
         margin-top: 3rem;
         text-align: center;
-    }
-}
-
-.submit button {
-    position: relative;
-    transition: all 0.3s;
-}
-
-.submit button.loading {
-    color: transparent;
-}
-
-.submit button.loading::after {
-    content: '...';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 20px;
-    animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-    0% { content: '.'; }
-    33% { content: '..'; }
-    66% { content: '...'; }
-}
-
-@media screen and (max-width: 768px) {
-    .login-container {
-        width: 90%;
-        padding: 20px;  /* Reduced padding */
-        margin: 0 15px;  /* Added margin */
-    }
-
-    input, button, select {
-        height: 2.8rem;
-        font-size: 14px;
-    }
-
-    .submit button {
-        margin-top: 10px;  /* Added spacing */
     }
 }
 
@@ -506,13 +455,14 @@ input-group1 {
                 </div>
             </div>
 
-            <a href="forgot-password.php" class="forgot-password">Forgot Password?</a>
+            <a href="forgot-password.php" class="forgot-password disabled" style="pointer-events: none; opacity: 0.5;">Forgot Password?</a>
+
             
             <div class="input-group1">
                 <div class="dropdown">
                     <select name="login" id="droplist" required>
                         <option value="3">Student</option>
-                        <option value="2">Instructor</option>
+                        <option value="2">Faculty</option>
                     </select>
                     <span class="material-icons">arrow_drop_down</span>
                 </div>
@@ -591,18 +541,13 @@ input-group1 {
     // Form submission
     $('#login-form').submit(function(e) {
         e.preventDefault();
-        formSubmitted = true;
-        
-        // Add loading state
-        const $submitButton = $(this).find('button[type="submit"]');
-        $submitButton.addClass('loading');
+        formSubmitted = true; // Mark form as submitted
         
         // Validate all fields
         const isIdentifierValid = validateField($('#identifier')[0], true);
         const isPasswordValid = validateField($('#password')[0], true);
         
         if (!isIdentifierValid || !isPasswordValid) {
-            $submitButton.removeClass('loading');
             return false;
         }
         
@@ -612,18 +557,16 @@ input-group1 {
             method: 'POST',
             data: $(this).serialize(),
             error: err => {
-                console.log(err);
+                console.log(err)
                 showError('An error occurred. Please try again later.');
-                $submitButton.removeClass('loading');  // Remove loading state
             },
             success: function(resp) {
                 if(resp == 1) {
                     location.href = 'index.php?page=home';
                 } else if(resp == 2) {
                     showError('Username or Password is Incorrect.');
-                    $submitButton.removeClass('loading');
                 } else if(resp == 3) {
-                    window.location.href = 'change_password.php';
+                    window.location.replace('change_password.php');
                 }
             }
         });

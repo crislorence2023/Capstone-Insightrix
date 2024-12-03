@@ -35,58 +35,58 @@ while ($row = $evaluations->fetch_assoc()) {
 // Function to generate table for a department
 function generate_department_table($dept_name, $dept_evaluations) {
     global $conn;
+    $i = 1;
     ?>
     <div class="department-container mb-4">
         <h3><?php echo $dept_name != 'Unassigned' ? $dept_name . ' Department' : 'Unassigned Department'; ?></h3>
-        <div class="table-responsive">
-            <table class="table table-hover evaluation-table">
-                <thead>
-                    <tr>
-                        <th width="50">
-                            <input type="checkbox" class="select-all-dept checkbox-custom" 
-                                   data-dept="<?php echo htmlspecialchars($dept_name); ?>">
-                        </th>
-                        <th>Date Taken</th>
-                        <th>Student</th>
-                        <th>Class</th>
-                        <th>Faculty</th>
-                        <th>Subject</th>
-                        <th>Ratings</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($dept_evaluations as $row): 
-                        // Calculate average rating
-                        $answers = $conn->query("SELECT * FROM evaluation_answers WHERE evaluation_id = {$row['evaluation_id']}");
-                        $total_rating = 0;
-                        $count = 0;
-                        while($answer = $answers->fetch_assoc()){
-                            $total_rating += $answer['rate'];
-                            $count++;
-                        }
-                        $avg_rating = $count > 0 ? number_format($total_rating / $count, 2) : 'N/A';
-                    ?>
-                    <tr>
-                        <td>
-                            <input type="checkbox" class="evaluation-checkbox" 
-                                   data-dept="<?php echo htmlspecialchars($dept_name); ?>"
-                                   value="<?php echo $row['evaluation_id']; ?>">
-                        </td>
-                        <td><?php echo date("M d, Y h:i A", strtotime($row['date_taken'])); ?></td>
-                        <td><?php echo $row['student_school_id'] . ' - ' . $row['student_name']; ?></td>
-                        <td><?php echo $row['class']; ?></td>
-                        <td><?php echo $row['faculty_name']; ?></td>
-                        <td><?php echo $row['subject_code'] . ' - ' . $row['subject']; ?></td>
-                        <td><?php echo $avg_rating; ?></td>
-                        <td>
-                            <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['evaluation_id']; ?>">Delete</button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-bordered table-striped evaluation-table">
+            <thead class="thead-dark">
+                <tr>
+                    <th width="50">
+                        <input type="checkbox" class="select-all-dept" data-dept="<?php echo htmlspecialchars($dept_name); ?>">
+                    </th>
+                    <th>Date Taken</th>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Faculty</th>
+                    <th>Subject</th>
+                    <th>Ratings</th>
+                    <th>Comment</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($dept_evaluations as $row): 
+                    // Calculate average rating
+                    $answers = $conn->query("SELECT * FROM evaluation_answers WHERE evaluation_id = {$row['evaluation_id']}");
+                    $total_rating = 0;
+                    $count = 0;
+                    while($answer = $answers->fetch_assoc()){
+                        $total_rating += $answer['rate'];
+                        $count++;
+                    }
+                    $avg_rating = $count > 0 ? number_format($total_rating / $count, 2) : 'N/A';
+                ?>
+                <tr>
+                    <td>
+                        <input type="checkbox" class="evaluation-checkbox" 
+                               data-dept="<?php echo htmlspecialchars($dept_name); ?>"
+                               value="<?php echo $row['evaluation_id']; ?>">
+                    </td>
+                    <td><?php echo date("M d, Y h:i A", strtotime($row['date_taken'])); ?></td>
+                    <td><?php echo $row['student_school_id'] . ' - ' . $row['student_name']; ?></td>
+                    <td><?php echo $row['class']; ?></td>
+                    <td><?php echo $row['faculty_name']; ?></td>
+                    <td><?php echo $row['subject_code'] . ' - ' . $row['subject']; ?></td>
+                    <td><?php echo $avg_rating; ?></td>
+                    <td><?php echo htmlspecialchars($row['comment']); ?></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="<?php echo $row['evaluation_id']; ?>">Delete</button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
     <?php
 }
@@ -100,132 +100,20 @@ function generate_department_table($dept_name, $dept_evaluations) {
     <title>View Surveys</title>
     <link rel="stylesheet" href="../assets/plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Montserrat', sans-serif;
-        }
-        
-        .container-fluid {
-           
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .department-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            padding: 1.5rem;
-        }
-
-        .department-container h3 {
-            color: #2c3e50;
-            font-weight: 700;
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-            letter-spacing: -0.5px;
-        }
-
-        .evaluation-table {
-            border: none;
-            margin-bottom: 0;
-        }
-
-        .evaluation-table th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            color: #495057;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            padding: 1rem;
-            letter-spacing: 0.5px;
-        }
-
-        .form-control{
-            width: 99%;
-        }
-
-        .evaluation-table td {
-            padding: 1rem;
-            vertical-align: middle;
-            color: #495057;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .evaluation-table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .btn-danger {
-            background-color: #dc3545;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            transition: all 0.2s;
-        }
-
-        .btn-danger:hover {
-            background-color: #c82333;
-            transform: translateY(-1px);
-        }
-
-        #searchInput {
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-        }
-
-        #searchInput:focus {
-            border-color: #80bdff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-        }
-
-        .page-header {
-            margin-bottom: 2rem;
-        }
-
-        .page-header h2 {
-            color: #2c3e50;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .checkbox-custom {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        #searchInput::placeholder {
-            font-family: 'Montserrat', sans-serif;
-            font-size: 0.9rem;
-        }
-
-        .btn {
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            letter-spacing: 0.3px;
+        .evaluation-table th:first-child,
+        .evaluation-table td:first-child {
+            width: 50px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container-fluid">
-        <div class="page-header">
-            <h2 class="text-center">Survey Results</h2>
-        </div>
-        <div class="mb-4 d-flex justify-content-between align-items-center">
-            <div class="search-container position-relative flex-grow-1 me-3">
-                <input type="text" id="searchInput" class="form-control" 
-                       placeholder="Search for students, faculty, subjects...">
-            </div>
-            <button class="btn btn-danger" id="deleteAllSelected">
-                Delete Selected
-            </button>
+        <h2 class="text-center mt-4 mb-4">Survey Results</h2>
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <input type="text" id="searchInput" class="form-control w-75" placeholder="Search for students, faculty, subjects...">
+            <button class="btn btn-danger" id="deleteAllSelected">Delete All Selected</button>
         </div>
 
         <?php

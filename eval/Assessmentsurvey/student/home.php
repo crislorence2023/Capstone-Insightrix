@@ -49,21 +49,23 @@ $login_name = $_SESSION['login_name'];
 
         body {
             font-family: 'Montserrat', sans-serif;
-           
+            background-color: var(--background-color);
             color: var(--text-primary);
-           
+          
             line-height: 1.6;
-            padding: 1rem;
+            padding: 2rem;
         }
 
         .welcome-container {
             max-width: 1200px;
-            margin-bottom: 1.5rem;
+            margin: 0 auto 2rem;
+            padding: 1.5rem;
+            background: var(--card-background);
             border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
+            align-items: center;
+            gap: 1rem;
         }
 
         .welcome-avatar {
@@ -79,33 +81,21 @@ $login_name = $_SESSION['login_name'];
         }
 
         .welcome-message {
-            font-size: 2rem;
+            font-size: 1.25rem;
             font-weight: 500;
         }
 
         #welcome-text {
-            color: teal;
+            color: var(--primary-color);
             font-weight: 600;
         }
 
         .grid-container {
             max-width: 1200px;
-            margin: 0 auto 2rem;
+            margin: 0 auto;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 2rem;
-        }
-
-        @media (max-width: 992px) {
-            .grid-container {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .grid-container {
-                grid-template-columns: 1fr;
-            }
         }
 
         .card {
@@ -114,9 +104,6 @@ $login_name = $_SESSION['login_name'];
             padding: 1.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: var(--transition);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
         }
 
         .card:hover {
@@ -145,19 +132,18 @@ $login_name = $_SESSION['login_name'];
             justify-content: center;
             font-size: 1.25rem;
             color: white;
-            min-width: 40px;
         }
 
         .academic-icon {
-            background: #1a56db;
+            background: var(--primary-color);
         }
 
         .security-icon {
-            background: #047857;
+            background: var(--success-color);
         }
 
         .survey-icon {
-            background: #b45309;
+            background: var(--warning-color);
         }
 
         .card-title {
@@ -175,19 +161,16 @@ $login_name = $_SESSION['login_name'];
 
         .card-content {
             color: var(--text-secondary);
-            flex: 1;
         }
 
         .status-badge {
             display: inline-block;
             padding: 0.25rem 0.75rem;
-            border-radius: 15px !important;
+            border-radius: 9999px;
             font-size: 0.875rem;
             font-weight: 600;
             margin-top: 1rem;
-            width: 90%;
-            
-            text-align: center;
+            box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
         }
 
         .status-not-started {
@@ -198,7 +181,6 @@ $login_name = $_SESSION['login_name'];
         .status-started {
             background: #ecfdf5;
             color: #059669;
-            border-radius: 15px !important;
         }
 
         .status-closed {
@@ -239,7 +221,7 @@ $login_name = $_SESSION['login_name'];
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
         }
 
         .feature-list li i {
@@ -501,7 +483,7 @@ $login_name = $_SESSION['login_name'];
 }
 
 .progress-fill {
-    background: #22c55e;
+    background: #28a745;
     height: 100%;
     border-radius: 1rem;
     transition: width 0.5s ease-in-out;
@@ -547,7 +529,7 @@ $login_name = $_SESSION['login_name'];
 
 .eval-icon {
     margin-right: 1rem;
-    color: #22c55e;
+    color: #28a745;
     font-size: 1.5rem;
 }
 
@@ -639,7 +621,7 @@ $login_name = $_SESSION['login_name'];
         }
 
         .progress-icon {
-    background: var(--primary-color);
+    background: var(--progress-color);  /* Using the progress-color variable you already defined */
 }
 .location {
     text-align: center;
@@ -656,7 +638,7 @@ $login_name = $_SESSION['login_name'];
 }
 
 .location i {
-    color: var(--primary-color);
+    color: teal;
     animation: bounce 2s infinite;
 }
 
@@ -668,214 +650,19 @@ $login_name = $_SESSION['login_name'];
         transform: translateY(5px);
     }
 }
-
-.status-badge-container {
-    display: flex;
-    justify-content: center;
-    margin: 1rem 0;
-}
-
-.status-badge {
-    display: inline-block;
-    
-    border-radius: 15px;
-    font-size: 1rem;
-    font-weight: 600;
-   
-    transform: scale(1.2);
-}
-
-/* Update existing status badge color classes */
-.status-not-started {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.status-started {
-    background: #ecfdf5;
-    color: #059669;
-}
-
-.status-closed {
-    background: #f3f4f6;
-    color: #4b5563;
-}
-
-.progress-info-container {
-    margin-top: 2rem;
-}
-
-.progress-info-text {
-    text-align: center;
-    font-size: 1.25rem;
-    color: #212529;
-    margin-bottom: 1rem;
-}
-
-.progress-info-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    text-align: center;
-}
-
-.progress-info-container .card {
-    background: linear-gradient(to right, var(--card-background), #f0f9ff, var(--card-background));
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.progress-info-text {
-    margin-top: 1rem;
-    color: var(--text-secondary);
-    font-size: 1.1rem;
-}
-
-.progress-info-container .location i {
-    color: var(--primary-color);
-    font-size: 1.2rem;
-}
-
-.progress-info-container .location p {
-    color: var(--text-primary);
-    font-size: 1.2rem;
-    font-weight: 500;
-}
-
-.down-arrow {
-    text-align: center;
-    margin-top: 1rem;
-    margin-bottom: 2rem;
-    position: relative;
-    height: 40px;
-}
-
-.down-arrow i {
-    color: var(--primary-color);
-    font-size: 1.5rem;
-    opacity: 0;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    animation: moveArrow 2s infinite;
-}
-
-.down-arrow i:nth-child(1) {
-    animation-delay: 0s;
-}
-
-.down-arrow i:nth-child(2) {
-    animation-delay: 0.5s;
-}
-
-.down-arrow i:nth-child(3) {
-    animation-delay: 1s;
-}
-
-@keyframes moveArrow {
-    0% {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0;
-        transform: translate(-50%, 20px);
-    }
-}
-
-/* Add these new styles for the academic card */
-#academic-info {
-    background: linear-gradient(145deg, var(--card-background), #f0f7ff);
-    border: 2px solid #e6f0fd;
-    transform-origin: center;
-    position: relative;
-}
-
-#academic-info::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    border-radius: var(--border-radius);
-    background: linear-gradient(45deg, #2563eb, #3b82f6, #60a5fa);
-    z-index: -1;
-    opacity: 0.3;
-}
-
-#academic-info .card-header {
-    position: relative;
-    padding-bottom: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid rgba(37, 99, 235, 0.1);
-}
-
-#academic-info .academic-icon {
-    background: linear-gradient(45deg, #1e40af, #2563eb);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-    transform: scale(1.1);
-}
-
-#academic-info .card-title {
-    color: #1e40af;
-    font-size: 1.4rem;
-}
-
-#academic-info:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 12px 20px -8px rgba(37, 99, 235, 0.2);
-}
-
-/* Update the status badge container specifically for academic card */
-#academic-info .status-badge-container {
-    margin-top: 1.5rem;
-}
-
-#academic-info .status-badge {
-    transform: scale(1.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.sub-welcome-message {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    margin-left: 2px;
-    width: 60%;
-}
-
-@media (max-width: 768px) {
-    .welcome-container {
-        align-items: center;
-    }
-    
-    .sub-welcome-message {
-        text-align: center;
-        width: 100%;
-        font-size: 1rem;
-        padding: 0 1rem;
-        margin-left: 0;
-    }
-}
     </style>
 
     
 </head>
 <body>
     <div class="welcome-container">
-        <p class="welcome-message">
-            Welcome back, <span id="welcome-text"></span>! 
-        </p>
-        <div class="sub-welcome-message">
-            <p>Ready to share your valuable feedback today? Your insights help shape the future of education and  improve the learning experience for everyone.</p>
-            <p></p>
+        <div class="welcome-avatar">
+            <i class="fas fa-user"></i>
         </div>
+        <p class="welcome-message">
+            Welcome back, <span id="welcome-text"></span>!
+        </p>
     </div>
-
-    
 
 
   
@@ -895,13 +682,16 @@ $login_name = $_SESSION['login_name'];
                         <?php echo $_SESSION['academic']['year'] . ' ' . ordinal_suffix($_SESSION['academic']['semester']); ?> Semester
                     </span>
                 </p>
-                <div class="status-badge-container">
-                    <div class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
-                        <?php echo $astat[$_SESSION['academic']['status']]; ?>
-                    </div>
+                <div class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
+                    <?php echo $astat[$_SESSION['academic']['status']]; ?>
                 </div>
+                <div class="location">
+    <p>Evaluation Progress Below <i class="fas fa-arrow-down"></i></p>
+</div>
             </div>
         </div>
+
+   
 
         <!-- Security Info Card -->
         <div class="card">
@@ -921,29 +711,34 @@ $login_name = $_SESSION['login_name'];
             </div>
         </div>
 
-        <!-- Progress Info Card -->
+        <!-- Survey Card -->
         <div class="card">
             <div class="card-header">
-                <div class="card-icon progress-icon">
-                    <i class="fas fa-chart-bar"></i>
+                <div class="card-icon survey-icon">
+                    <i class="fas fa-star"></i>
                 </div>
-                <h2 class="card-title">Progress Overview</h2>
+                <h2 class="card-title">Teacher Assessment</h2>
             </div>
             <div class="card-content">
-                <div class="location">
-                    <p>View your evaluation progress </p> 
-                </div>
-                <p class="progress-info-text">Track your progress and completed assessments in the section below</p>
-                <div class="down-arrow">
-                    <i class="fas fa-chevron-down"></i>
-                    <i class="fas fa-chevron-down"></i>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
+                <p>Help us improve education quality by sharing your valuable feedback.</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> Enhance teaching methods</li>
+                    <li><i class="fas fa-check-circle"></i> Improve classroom experience</li>
+                    <li><i class="fas fa-check-circle"></i> Support teacher development</li>
+                </ul>
+                <button class="evaluate-btn" onclick="window.location.href='index.php?page=evaluate';">
+                    Begin Evaluation
+                </button>
+                <p class="deadline-text">
+                    <i class="fas fa-clock"></i> Please complete by the end of the semester
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- Rest of the content (Evaluation Progress section) continues below -->
+           <!-- Survey Progress Card -->
+
+
 
     <div class="card">
         <div class="card-header">
@@ -953,9 +748,6 @@ $login_name = $_SESSION['login_name'];
             <h2 class="card-title-progress">Evaluation Progress</h2>
         </div>
         <div class="card-content">
-            <div class="location">
-                
-            </div>
             <?php
             // Get evaluation progress data
             $progress_query = $conn->query("SELECT 

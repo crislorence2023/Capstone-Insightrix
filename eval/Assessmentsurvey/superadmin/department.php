@@ -62,7 +62,6 @@ $departments = $conn->query("SELECT * FROM department_list ORDER BY name ASC");
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <style>
         :root {
             --bs-primary-rgb: 13, 110, 253;
@@ -135,204 +134,87 @@ $departments = $conn->query("SELECT * FROM department_list ORDER BY name ASC");
             padding: 0.375rem 0.75rem;
             border-radius: 0.25rem;
         }
-        .dashboard-container {
-            padding: 2rem;
-            background-color: #f8f9fa;
-            min-height: 100vh;
-        }
-
-        .header-card {
-            background: linear-gradient(135deg, #2193b0, #6dd5ed);
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            color: white;
-        }
-
-        .content-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-        }
-
-        .card-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid #eee;
-            background: transparent;
-        }
-
-        .card-title {
-            color:#1F2D3D;
-            font-size: 20px;
-            margin: 0;
-            font-weight: 600;
-        }
-
-        .card-body {
-            padding: 1.5rem;
-        }
-
-        .form-floating > .form-control {
-            border-radius: 10px;
-            border: 1px solid #dee2e6;
-        }
-
-        .form-floating > .form-control:focus {
-            border-color: #2193b0;
-            box-shadow: 0 0 0 3px rgba(33, 147, 176, 0.1);
-        }
-
-        .btn-primary {
-            background: #0D6EFD;
-            border: none;
-            border-radius: 10px;
-        }
-
-        .btn-action {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 0.25rem;
-            border-radius: 8px;
-            transition: all 0.3s;
-        }
-
-        .table {
-            margin: 0;
-        }
-
-        .table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
-            color: #2c3e50;
-            font-weight: 600;
-        }
-
-        .modal-content {
-            border-radius: 15px;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, #2193b0, #6dd5ed);
-            color: white;
-            border: none;
-        }
-
-        .modal-header .btn-close {
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-container {
-                padding: 1rem;
-            }
-            
-            .header-content {
-                text-align: center;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .table-responsive-md {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-            
-            #departmentTable {
-                white-space: nowrap;
-            }
-            
-            .card-body {
-                padding: 1rem;
-            }
-        }
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-   
+    <!-- Page Header -->
+    
 
-        <div class="content-card">
-            <!-- Add Department Form -->
-            <div class="card-header">
-                <h5 class="card-title">Add New Department</h5>
+    <div class="callout callout-info container pb-5">
+        <!-- Alert Messages -->
+        <?php if (isset($msg)): ?>
+            <div class="alert-container position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index: 1050;">
+                <?php echo $msg; ?>
             </div>
-            <div class="card-body">
-                <form method="POST" id="addDepartmentForm">
-                    <div class="row g-3">
-                        <div class="col-md-5">
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="nameInput" name="name" required>
-                                <label for="nameInput">Department Name</label>
-                            </div>
-                        </div>
-                        <div class="col-md-5">
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="descriptionInput" name="description">
-                                <label for="descriptionInput">Description</label>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" name="submit" class="btn btn-primary h-100 w-100">
-                                <i class="fas fa-plus me-2"></i>Add Department
-                            </button>
+        <?php endif; ?>
+
+        <!-- Add Department Form -->
+        <div class="department-form">
+            <h5 class="mb-2">Add New Department</h5>
+            <form method="POST" id="addDepartmentForm">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="nameInput" name="name" placeholder="Department Name" required>
+                            <label for="nameInput">Department Name</label>
                         </div>
                     </div>
-                </form>
-            </div>
+                    <div class="col-md-5">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="descriptionInput" name="description" placeholder="Description">
+                            <label for="descriptionInput">Description</label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" name="submit" class="btn btn-primary h-100 w-100">
+                            <i class="fas fa-plus me-2"></i>Add Department
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
 
         <!-- Departments Table -->
-        <div class="content-card mt-4">
-            <div class="card-header">
-                <h5 class="card-title">Department List</h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive-md">
-                    <table id="departmentTable" class="table table-hover mb-0 w-100">
-                        <thead>
-                            <tr>
-                                <th class="px-4" style="min-width: 50px">#</th>
-                                <th style="min-width: 150px">Department</th>
-                                <th style="min-width: 200px">Description</th>
-                                <th style="min-width: 120px">Date Added</th>
-                                <th style="min-width: 100px" class="text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php 
-                            $i = 1;
-                            while($row = $departments->fetch_assoc()): 
-                            ?>
-                            <tr>
-                                <td class="px-4"><?php echo $i++; ?></td>
-                                <td>
-                                    <div class="fw-bold"><?php echo htmlspecialchars($row['name']); ?></div>
-                                </td>
-                                <td><?php echo htmlspecialchars($row['description']); ?></td>
-                                <td><?php echo date('M d, Y', strtotime($row['date_created'])); ?></td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-outline-primary btn-action" 
-                                            onclick="editDepartment('<?php echo $row['id']; ?>', '<?php echo htmlspecialchars($row['name']); ?>', '<?php echo htmlspecialchars($row['description']); ?>')"
-                                            data-bs-toggle="tooltip" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-action" 
-                                            onclick="deleteDepartment('<?php echo $row['id']; ?>', '<?php echo htmlspecialchars($row['name']); ?>')"
-                                            data-bs-toggle="tooltip" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="card datatable-card">
+            <div class="table-responsive">
+                <table id="departmentTable" class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="px-4" width="5%">#</th>
+                            <th width="25%">Department</th>
+                            <th width="45%">Description</th>
+                            <th width="15%">Date Added</th>
+                            <th width="10%" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $i = 1;
+                        while($row = $departments->fetch_assoc()): 
+                        ?>
+                        <tr>
+                            <td class="px-4"><?php echo $i++; ?></td>
+                            <td>
+                                <div class="fw-bold"><?php echo htmlspecialchars($row['name']); ?></div>
+                            </td>
+                            <td><?php echo htmlspecialchars($row['description']); ?></td>
+                            <td><?php echo date('M d, Y', strtotime($row['date_created'])); ?></td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-outline-primary btn-action" 
+                                        onclick="editDepartment('<?php echo $row['id']; ?>', '<?php echo htmlspecialchars($row['name']); ?>', '<?php echo htmlspecialchars($row['description']); ?>')"
+                                        data-bs-toggle="tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-action" 
+                                        onclick="deleteDepartment('<?php echo $row['id']; ?>', '<?php echo htmlspecialchars($row['name']); ?>')"
+                                        data-bs-toggle="tooltip" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -377,13 +259,11 @@ $departments = $conn->query("SELECT * FROM department_list ORDER BY name ASC");
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             // Initialize DataTable
             $('#departmentTable').DataTable({
-                "responsive": false,
-                "scrollX": true,
+                "responsive": true,
                 "lengthChange": true,
                 "autoWidth": false,
                 "pageLength": 10,

@@ -1,3 +1,5 @@
+
+
 <?php
 ob_start();
 date_default_timezone_set("Asia/Manila");
@@ -5,7 +7,6 @@ date_default_timezone_set("Asia/Manila");
 $action = $_GET['action'];
 include 'admin_class.php';
 $crud = new Action();
-
 
 
 if($action == 'login'){ 
@@ -24,10 +25,6 @@ if($action == 'login2'){
 		echo $login;
 }
 
-if($action == "set_role"){
-    $_SESSION['user_role'] = $_POST['role'];
-    exit;
-}
 
 //superadmin
 if($action == 'login3'){
@@ -50,39 +47,6 @@ if($action == 'logout4'){
         echo $logout;
 }
 
-//staff_cme
-if($action == 'login4_cme'){
-    $login = $crud->login4_cme();
-    if($login)
-        echo $login;
-}
-
-if($action == 'logout4_cme'){
-    $logout = $crud->logout4_cme();
-    if($logout)
-        echo $logout;
-}
-
-if($action == 'logout4_ceas'){
-    $logout = $crud->logout4_ceas();
-    if($logout)
-        echo $logout;
-}
-
-//staff_coe
-if($action == 'login4_coe'){
-    $login = $crud->login4_coe();
-    if($login)
-        echo $login;
-}
-
-
-
-if($action == 'logout4_coe'){
-    $logout = $crud->logout4_coe();
-    if($logout)
-        echo $logout;
-}
 
 
 if($action == 'logout'){
@@ -347,14 +311,16 @@ if($action == 'get_notifications'){
         echo $save;
 }
 
-if($action == "mark_notification_read"){
-    echo $crud->mark_notification_read();
+if($action == 'mark_notification_read'){
+    $save = $crud->mark_notification_read();
+    if($save)
+        echo $save;
 }
-if($action == "mark_all_notifications_read"){
-    echo $crud->mark_all_notifications_read();
-}
-if($action == "delete_all_notifications"){
-    echo $crud->delete_all_notifications();
+
+if($action == 'mark_all_notifications_read'){
+    $save = $crud->mark_all_notifications_read();
+    if($save)
+        echo $save;
 }
 
 
@@ -375,12 +341,6 @@ if($action == 'delete_staff'){
 	if($save)
 		echo $save;
 }
-
-
-
-
-
-
 
 if($action == "send_evaluation_to_all"){
     $result = $crud->send_evaluation_to_all_students();
@@ -422,337 +382,11 @@ if($action == 'delete_department'){
 
 
 
-//10/11/2024
-if($action == 'save_assignment') {
-    $result = $crud->save_assignment();
-    echo $result;
-}
-
-if($action == 'load_assignments') {
-    $get = $crud->load_assignments();
-    echo $get;
-}
-
-if($action == 'delete_assignment') {
-    $result = $crud->delete_assignment();
-    echo $result;
-}
-
-if($action == 'check_assignment') {
-    $result = $crud->check_assignment();
-    echo $result;
-}
-
-if($action == 'load_assignments_grid') {
-    $result = $crud->load_assignments_grid();
-    echo $result;
-}
-
-//November 11,2024
-
-if($action == 'load_assignments_faculty') {
-    $get = $crud->load_assignments_faculty();  // Changed from load_assignments()
-    echo $get;
-}
-
-//cme
-
-if($action == 'load_assignments_faculties_cme') {
-    $get = $crud->load_assignments_faculties_cme();  // Changed from load_assignments()
-    echo $get;
-}
-
-if($action == 'delete_assignment_faculty') {
-    $result = $crud->delete_assignment_faculty();  // Changed from delete_assignment()
-    echo $result;
-}
-
-if($action == 'save_assignment_faculty') {
-    $result = $crud->save_assignment_faculty();  // Changed from save_assignment()
-    echo $result;
-}
-
-if($action == 'check_assignment_faculty') {
-    $result = $crud->check_assignment_faculty();  // Changed from check_assignment()
-    echo $result;
-}
-if($action == 'update_assignment_faculty') {
-    $result = $crud->update_assignment_faculty();
-    echo $result;
-}
-if($action == 'get_assignment_faculty') {
-    $result = $crud->get_assignment_faculty();
-    echo $result;
-}
-
-//November 12,2024
-if($action == 'get_departments_faculty') {
-    $result = $crud->get_departments_faculty();
-    echo $result;
-}
-
-if($action == 'get_faculty_by_department') {
-    $result = $crud->get_faculty_by_department();
-    echo $result;
-}
-
-if($action == 'get_classes_by_department') {
-    $result = $crud->get_classes_by_department();
-    echo $result;
-}
-if($action == 'get_subjects_by_department') {
-    $result = $crud->get_subjects_by_department();
-    echo $result;
-}
-if($action == 'load_assignments_faculties') {
-    $result = $crud->load_assignments_faculties();
-    echo $result;
-}
-
-if($action == 'get_dashboard_stats') {
-    $result = $crud->get_dashboard_stats();
-    echo $result;
-}
-
-if($action == 'get_dashboard_stats_cot') {
-    $result = $crud->get_dashboard_stats_cot();
-    echo $result;
-}
-
-//November 18,2024 || Classroom
-
-if($action == 'add_student_to_class') {
-    $result = $crud->add_student_to_class();
-    echo $result;
-}
-
-if($action == 'get_class_details') {
-    $class_id = $_POST['class_id'];
-    $result = $crud->get_class_details($class_id);
-    echo $result;
-}
-
-
-
-
-
-if($action == "check_academic_year_subjects") {
-    $academic = $crud->check_academic_year_subjects();
-    if($academic)
-        echo $academic;
-}
-
-if($action == 'delete_from_class'){
-    $result = $crud->delete_from_class();
-    echo $result;
-    exit;
-}
-
-//Add_subjects_to_class.php
-
-// Add this to your existing ajax.php file
-if($action == 'save_class_subject'){
-    $result = $crud->save_class_subject();
-    echo $result;
-}
-
-if($action == 'delete_class_subject'){
-    $result = $crud->delete_class_subject();
-    echo $result;
-}
-
-if($action == 'get_class_assignments'){
-    $crud->get_class_assignments();
-}
-
-
-
-
-
-
-
-
-//November 19,2024 for faculty dashboard, home
-
-if ($action == 'get_students') {
-    $faculty_id = $_POST['faculty_id'];
-    $academic_id = $_SESSION['academic']['id'];
-    echo $crud->get_students($faculty_id, $academic_id);
-}
-
-
-
 
 if($action == 'get_performance_overview'){
     $performance = $crud->get_performance_overview();
     if($performance)
         echo $performance;
 }
-
-if ($action == 'get_department_list') {
-    $departments = $crud->get_department_list();
-    if ($departments) {
-        echo $departments;
-    }
-}
-
-//Classroom.php
-
-
-if($action == 'get_classroom_details') {
-    $classroom_details = $crud->get_classroom_details();
-    if($classroom_details)
-        echo $classroom_details;
-}
-
-//live Classroom
-
-if($action == 'save_classroom_assignment') {
-    $save = $crud->save_classroom_assignment();
-    if($save)
-        echo $save;
-}
-
-if($action == 'get_class_students') {
-    $students = $crud->get_class_students();
-    if($students)
-        echo $students;
-}
-
-if($action == 'get_department_resources') {
-    $resources = $crud->get_department_resources();
-    if($resources)
-        echo $resources;
-}
-
-//add new students modified
-
-if($action == 'get_classes_by_department_modified') {
-    $classes = $crud->get_classes_by_department_modified();
-    if($classes)
-        echo $classes;
-}
-
-//add new student modified_cme
-if($action == 'get_classes_by_department_modified_cme') {
-    $classes = $crud->get_classes_by_department_modified_cme();
-    if($classes)
-        echo $classes;
-}
-
-
-
-//status-evaluation.php
-
-if($action == 'get_evaluation_status') {
-    $result = $crud->get_evaluation_status();
-    echo $result;
-}
-
-if($action == 'get_evaluation_status_cme') {
-    $result = $crud->get_evaluation_status_cme();
-    echo $result;
-}
-
-if($action == 'get_evaluation_status_coe') {
-    $result = $crud->get_evaluation_status_coe();
-    echo $result;
-}
-if($action == 'get_evaluation_status_ceas') {
-    $result = $crud->get_evaluation_status_ceas();
-    echo $result;
-}
-
-if ($_GET['action'] == 'get_sections_by_department') {
-    $result = $crud->get_sections_by_department();
-    if($result)
-        echo $result;
-}
-
-//faculty-section. student
-
-if($action == "get_student_details_faculty"){
-    echo $crud->get_student_details_faculty();
-}
-
-//completed evaluations
-if($action == 'get_completed_evaluations'){
-    $result = $crud->get_completed_evaluations();
-    echo $result;
-}
-
-if($action == 'get_evaluation_details'){
-    $result = $crud->get_evaluation_details();
-    echo $result;
-} 
-
-
-
-//December 1 modify staff 3 departments
-
-
-if($action == 'update_staff_ceas'){
-	$save = $crud->update_staff_ceas();
-	if($save)
-		echo $save;
-}
-if($action == 'delete_staff_ceas'){
-	$save = $crud->delete_staff_ceas();
-	if($save)
-		echo $save;
-}
-
-
-if($action == 'update_staff_cme'){
-	$save = $crud->update_staff_cme();
-	if($save)
-		echo $save;
-}
-if($action == 'delete_staff_cme'){
-	$save = $crud->delete_staff_cme();
-	if($save)
-		echo $save;
-}
-
-if($action == 'update_staff_coe'){
-	$save = $crud->update_staff_coe();
-	if($save)
-		echo $save;
-}
-if($action == 'delete_staff_coe'){
-	$save = $crud->delete_staff_coe();
-	if($save)
-		echo $save;
-}
-
-
-//save staff 3 departments
-
-if($action == 'save_staff_cme'){
-    $save = $crud->save_staff_cme();
-    if($save)
-        echo $save;
-}
-if($action == 'save_staff_coe'){
-    $save = $crud->save_staff_coe();
-    if($save)
-        echo $save;
-}
-if($action == 'save_staff_ceas'){
-    $save = $crud->save_staff_ceas();
-    if($save)
-        echo $save;
-}
-
-
-//get assignments
-
-
-
-
-
-
-
-
 ob_end_flush();
 ?>

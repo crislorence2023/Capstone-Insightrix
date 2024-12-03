@@ -6,12 +6,6 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if user is logged in and is an admin
-if(!isset($_SESSION['login_id']) || $_SESSION['login_type'] != 1){
-    header("location:../login.php");
-    exit;
-}
-
 // Fetch all evaluations
 $evaluations = $conn->query("SELECT e.*, s.school_id as student_school_id, 
                             CONCAT(s.firstname, ' ', s.lastname) as student_name, 
@@ -42,9 +36,6 @@ function generate_department_table($dept_name, $dept_evaluations) {
         <table class="table table-bordered table-striped evaluation-table">
             <thead class="thead-dark">
                 <tr>
-                    <th width="50">
-                        <input type="checkbox" class="select-all-dept" data-dept="<?php echo htmlspecialchars($dept_name); ?>">
-                    </th>
                     <th>Date Taken</th>
                     <th>Student</th>
                     <th>Class</th>
@@ -68,11 +59,6 @@ function generate_department_table($dept_name, $dept_evaluations) {
                     $avg_rating = $count > 0 ? number_format($total_rating / $count, 2) : 'N/A';
                 ?>
                 <tr>
-                    <td>
-                        <input type="checkbox" class="evaluation-checkbox" 
-                               data-dept="<?php echo htmlspecialchars($dept_name); ?>"
-                               value="<?php echo $row['evaluation_id']; ?>">
-                    </td>
                     <td><?php echo date("M d, Y h:i A", strtotime($row['date_taken'])); ?></td>
                     <td><?php echo $row['student_school_id'] . ' - ' . $row['student_name']; ?></td>
                     <td><?php echo $row['class']; ?></td>
@@ -100,20 +86,13 @@ function generate_department_table($dept_name, $dept_evaluations) {
     <title>View Surveys</title>
     <link rel="stylesheet" href="../assets/plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
-    <style>
-        .evaluation-table th:first-child,
-        .evaluation-table td:first-child {
-            width: 50px;
-            text-align: center;
-        }
-    </style>
 </head>
 <body>
     <div class="container-fluid">
         <h2 class="text-center mt-4 mb-4">Survey Results</h2>
-        <div class="mb-3 d-flex justify-content-between align-items-center">
-            <input type="text" id="searchInput" class="form-control w-75" placeholder="Search for students, faculty, subjects...">
-            <button class="btn btn-danger" id="deleteAllSelected">Delete All Selected</button>
+        
+        <div class="mb-3">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search for students, faculty, subjects...">
         </div>
 
         <?php
@@ -128,50 +107,6 @@ function generate_department_table($dept_name, $dept_evaluations) {
     <script src="../assets/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>
     $(document).ready(function() {
-
-        $('.select-all-dept').change(function() {
-            var dept = $(this).data('dept');
-            var isChecked = $(this).prop('checked');
-            $('.evaluation-checkbox[data-dept="' + dept + '"]').prop('checked', isChecked);
-        });
-
-        // Handle delete selected for specific department
-        $('.delete-selected-dept').click(function() {
-            var dept = $(this).data('dept');
-            var selectedIds = [];
-            
-            $('.evaluation-checkbox[data-dept="' + dept + '"]:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-
-            if(selectedIds.length === 0) {
-                alert('Please select evaluations to delete.');
-                return;
-            }
-
-            if(confirm('Are you sure you want to delete ' + selectedIds.length + ' selected evaluations from ' + dept + '?')) {
-                deleteSelectedEvaluations(selectedIds);
-            }
-        });
-
-        // Handle delete all selected button
-        $('#deleteAllSelected').click(function() {
-            var selectedIds = [];
-            
-            $('.evaluation-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-
-            if(selectedIds.length === 0) {
-                alert('Please select evaluations to delete.');
-                return;
-            }
-
-            if(confirm('Are you sure you want to delete all ' + selectedIds.length + ' selected evaluations?')) {
-                deleteSelectedEvaluations(selectedIds);
-            }
-        });
-
         $('.delete-btn').click(function() {
             var evaluationId = $(this).data('id');
             if(confirm('Are you sure you want to delete this survey?')) {
@@ -189,21 +124,6 @@ function generate_department_table($dept_name, $dept_evaluations) {
                 });
             }
         });
-
-        function deleteSelectedEvaluations(ids) {
-            $.ajax({
-                url: 'ajax.php?action=delete_multiple_evaluations',
-                type: 'POST',
-                data: {evaluation_ids: ids},
-                success: function(response) {
-                    alert(response);
-                    location.reload();
-                },
-                error: function() {
-                    alert('An error occurred while deleting the evaluations.');
-                }
-            });
-        }
 
         $('#searchInput').on('keyup', function() {
             var value = $(this).val().toLowerCase();

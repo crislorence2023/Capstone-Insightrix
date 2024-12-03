@@ -17,19 +17,6 @@ function ordinal_suffix($num) {
 
 $faculty_id = $_SESSION['login_id'];
 $academic_id = $_SESSION['academic']['id'];
-$student_query = "SELECT 
-    COUNT(DISTINCT sl.id) as total_students,
-    COUNT(DISTINCT fa.class_id) as total_classes,
-    COUNT(DISTINCT fa.subject_id) as total_subjects
-FROM faculty_assignments fa
-LEFT JOIN class_list cl ON fa.class_id = cl.id
-LEFT JOIN student_list sl ON cl.id = sl.class_id
-WHERE fa.faculty_id = {$faculty_id} 
-AND fa.academic_year_id = {$academic_id}
-AND fa.is_active = 1";
-
-$student_result = $conn->query($student_query);
-$student_summary = $student_result->fetch_assoc();
 
 // Get all subjects for this instructor in current semester
 $query = "SELECT 
@@ -50,25 +37,23 @@ GROUP BY r.subject_id";
 
 $result = $conn->query($query);
 
-$total_subjects = 0;
 $perf_distribution = array(
     'low' => 0,
     'moderate' => 0,
     'high' => 0
 );
 
+$total_subjects = 0;
 while($row = $result->fetch_assoc()) {
-    if ($row['average_rating'] !== null) {
-        $total_subjects++;
-        $rating = floatval($row['average_rating']);
-        
-        if($rating <= 2) {
-            $perf_distribution['low']++;
-        } else if($rating > 2 && $rating <= 4) {
-            $perf_distribution['moderate']++;
-        } else {
-            $perf_distribution['high']++;
-        }
+    $total_subjects++;
+    $rating = floatval($row['average_rating']);
+    
+    if($rating <= 2) {
+        $perf_distribution['low']++;
+    } else if($rating > 2 && $rating <= 4) {
+        $perf_distribution['moderate']++;
+    } else {
+        $perf_distribution['high']++;
     }
 }
 
@@ -85,10 +70,8 @@ $login_name = $_SESSION['login_name'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Evaluation System - Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-       </style>
-
-
-<style>
+   
+    <style>
        :root {
     --primary-color: #2563eb;
     --secondary-color: #3b82f6;
@@ -140,7 +123,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.5rem;
-    margin-top: 6.5rem;
+    margin-top: 2rem;
 }
 
 .dashboard-card {
@@ -260,62 +243,16 @@ body {
     line-height: 1.6;
 }
 
-.chart-wrapper {
-    position: relative;
-    margin: 2rem auto;
-    width: 100%;
-    max-width: 1200px;
-    margin-bottom: 1rem;
-}
-
-
 .chart-container {
+    height: 320px;
     position: relative;
-    width: 100%;
+    margin-top: 1.5rem;
+    padding: 1rem;
     background-color: white;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     box-shadow: var(--card-shadow);
-    padding-top: 2rem;
-    padding-bottom: 3.5rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  
-    height: 460px;
-    
-    
 }
 
-.chart-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin-bottom: 2rem;
-    padding-left: 0.5rem;
-
-}
-
-/* Adjust container for different screen sizes */
-@media (max-width: 768px) {
-    .chart-container {
-        padding: 1rem;
-        min-height: 260px;
-        max-height: 350px; /* Smaller max height for mobile */
-        margin: 0.5rem 0;
-    }
-
-    .chart-title {
-        font-size: 1rem;
-        text-align: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .chart-container {
-        min-height: 200px;
-        max-height: 300px; /* Even smaller for very small screens */
-        padding: 0.75rem;
-    }
-}
 .callout {
     padding: 1rem;
     background-color: rgba(37, 99, 235, 0.05);
@@ -382,355 +319,62 @@ body {
                 padding: 1.25rem;
             }
         }
-
-        .dashboard-card {
-            background: #fff;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .card-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-        }
-
-        .students-icon {
-            background-color: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .summary-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 1rem;
-            text-align: center;
-        }
-
-        .summary-item {
-    padding: 1rem;
-    border: 1px solid #dee2e6; /* Light grey border */
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    transition: transform 0.2s;
-    background: none; /* Remove background */
-}
-
-
-        .summary-item:hover {
-            transform: translateY(-2px);
-        }
-
-        .summary-number {
-            display: block;
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #1976d2;
-            margin-bottom: 0.5rem;
-        }
-
-        .summary-label {
-            font-size: 0.9rem;
-            color: #666;
-        }
-
-        @media (min-width: 769px) {
-            .summary-content {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        .view-details-link {
-    text-align: right;
-    padding-top: 10px;
-    margin-top: 10px;
-    border-top: 1px solid #eee;
-}
-
-.view-details-link .btn-link {
-    color: #0d6efd;
-    text-decoration: none;
-    font-size: 0.9rem;
-}
-
-.view-details-link .btn-link:hover {
-    text-decoration: underline;
-}
-
-#studentListModal .modal-dialog {
-    max-width: 800px;
-}
-
-#studentListModal .table {
-    margin-bottom: 0;
-}
-
-#studentListModal .modal-body {
-    padding: 1.5rem;
-}
-
-.table-responsive {
-    margin: -1rem;
-}
-
-.student-count {
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin-top: 1rem;
-}
-
-.teaching-footer {
-    padding: 15px;
-    border-top: 1px solid #eee;
-    text-align: right;
-}
-
-.view-details {
-    color: #007bff;
-    text-decoration: none;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: color 0.3s ease;
-}
-
-.view-details:hover {
-    color: #0056b3;
-}
-
-.view-details i {
-    font-size: 12px;
-}
-
-    .status-indicator {
-        font-size: 1.2rem !important;
-        padding: 0.3rem 0.8rem;
-        border-radius: 1rem;
-        display: inline-block;
-    }
-
-    .status-indicator.not-yet-started {
-        background-color: rgba(234, 179, 8, 0.1);
-        color: var(--warning-color);
-    }
-
-    .academic-status-item {
-    display: flex;
-    align-items: center;
-    padding: 1rem;
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-/* Status-specific container gradients */
-.academic-status-item.not-yet-started {
-    background: linear-gradient(135deg, #ffffff, #fff3cd);
-    
-   
-}
-
-.academic-status-item.started {
-    background: linear-gradient(135deg, #ffffff, #cfe2ff);
-    
-}
-
-.academic-status-item.closed {
-    background: linear-gradient(135deg, #ffffff, #f8d7da);
-    
-}
-
-/* Make the status value take full width for the gradient effect */
-.status-value {
-    width: 100%;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-}
-
-    .status-content {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        text-align: center;
-        
-    }
-
-    .status-label {
-        font-weight: 500 !important;
-        font-size: 1rem;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-
-    .status-value {
-        font-size: 1rem;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .status-dot {
-        font-size: 0.5rem;
-    }
-
-    /* Status-specific styles */
-    .status-value.not-yet-started {
-        color: var(--warning-color);
-    }
-
-    .status-value.started {
-        color: var(--primary-color);
-    }
-
-    .status-value.closed {
-        color: var(--accent-color);
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .summary-content {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-areas: 
-                "item1 item2"
-                "item3 item3"
-                "item4 item4";
-            gap: 1rem;
-        }
-
-        .summary-item:nth-child(1) { grid-area: item1; }
-        .summary-item:nth-child(2) { grid-area: item2; }
-        .summary-item:nth-child(3) { grid-area: item3; }
-        .summary-item:nth-child(4) { grid-area: item4; }
-
-        .academic-status-item {
-            grid-column: span 2;
-            margin-top: 0.5rem;
-        }
-    }
-
-    /* Hover effect */
-    .academic-status-item:hover {
-        background-color: #f8f9fa;
-    }
-
-</style>
+    </style>
 </head>
 <body>
-
-
     <main class="dashboard">
-     
-    
         <section class="welcome-section">
             <h1 class="welcome-title">
                 Welcome, <span id="welcome-text"></span>
             </h1>
-            <p class="welcome-subtitle">Access your evaluation dashboard and track your evaluation results</p>
+            <p class="welcome-subtitle">Access your evaluation dashboard and track your academic progress</p>
         </section>
-       
-            <!-- Add new Student Summary Card -->
+
+        <div class="card border-info shadow-sm mb-4">
+    <div class="container mt-4 mb-3 bg-light">
+        <p class=" mb-3 bg-teal">Subject Performance Distribution (Current Semester)</p>
+        <canvas id="performanceDistChart" width="100%" height="40"></canvas>
+    </div>
+
+        <div class="dashboard-grid">
+            <!-- Academic Progress Card -->
             <article class="dashboard-card">
-    <div class="card-header">
-        <div class="card-icon students-icon">
-            <i class="fas fa-users"></i>
-        </div>
-        <h2 class="card-title">Teaching Summary</h2>
-    </div>
-    <div class="summary-content">
-        <div class="summary-item">
-            <span class="summary-number"><?php echo $student_summary['total_students']; ?></span>
-            <span class="summary-label">Total Students</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-number"><?php echo $student_summary['total_subjects']; ?></span>
-            <span class="summary-label">Subjects Taught</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-number"><?php echo $_SESSION['academic']['year']; ?></span>
-            <span class="summary-label"><?php echo ordinal_suffix($_SESSION['academic']['semester']); ?> Semester</span>
-        </div>
-        <div class="summary-item academic-status-item <?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
-            <div class="status-content">
-                <span class="status-label">Academic Status</span>
-                <span class="status-value <?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
-                    </i>
-                    <?php echo $astat[$_SESSION['academic']['status']]; ?>
-                </span>
-            </div>
-        </div>
-    </div>
-    <div class="teaching-footer">
-        <a href="./index.php?page=StudentList" class="view-details">
-            View Details <i class="fas fa-arrow-right"></i>
-        </a>
-    </div>
-</article>
+                <div class="card-header">
+                    <div class="card-icon academic-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h2 class="card-title">Academic Progress</h2>
+                </div>
+                <div id="academic-info" class="academic-info">
+                    <div class="info-item">
+                        <span class="info-label">Current Period:</span>
+                        <span id="academic-year" class="info-value">
+                            <?php echo $_SESSION['academic']['year'] . ' ' . ordinal_suffix($_SESSION['academic']['semester']); ?> Semester
+                        </span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Status:</span>
+                        <span id="academic-status" class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
+                            <?php echo $astat[$_SESSION['academic']['status']]; ?>
+                        </span>
+                    </div>
+                </div>
+            </article>
 
-
-        <div class="chart-wrapper">
-    <div class="chart-container">
-        <h3 class="chart-title">Subject Performance Distribution (Current Semester)</h3>
-        <canvas id="performanceDistChart"></canvas>
-    </div>
-</div>
-
-<div class="dashboard-grid">
-    <!-- Academic Progress Card -->
-    <article class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon academic-icon">
-                <i class="fas fa-calendar-alt"></i>
-            </div>
-            <h2 class="card-title">Academic Progress</h2>
-        </div>
-        <div id="academic-info" class="academic-info">
-            <div class="info-item">
-                <span class="info-label">Current Period:</span>
-                <span id="academic-year" class="info-value">
-                    <?php echo $_SESSION['academic']['year'] . ' ' . ordinal_suffix($_SESSION['academic']['semester']); ?> Semester
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="info-label">Status:</span>
-                <span id="academic-status" class="status-badge status-<?php echo strtolower(str_replace(' ', '-', $astat[$_SESSION['academic']['status']])); ?>">
-                    <?php echo $astat[$_SESSION['academic']['status']]; ?>
-                </span>
-            </div>
-        </div>
-    </article>
-
-    <!-- Data Security Card -->
-    <article class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon security-icon">
-                <i class="fas fa-shield-alt"></i>
-            </div>
-            <h2 class="card-title">Data Security</h2>
-        </div>
-        <div class="security-content">
-            <p class="security-text">
-                The evaluation results are strictly confidential and accessible only to authorized personnel. All data is securely stored and handled in accordance with institutional privacy policies and data protection regulations.
-            </p>
-        </div>
-    </article>
-</div>
+            <!-- Data Security Card -->
+            <article class="dashboard-card">
+                <div class="card-header">
+                    <div class="card-icon security-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h2 class="card-title">Data Security</h2>
+                </div>
+                <div class="security-content">
+                    <p class="security-text">
+                        Your evaluation data is protected with industry-standard encryption. All information is handled with strict confidentiality and complies with data protection regulations.
+                    </p>
+                </div>
+            </article>
 
             
 </div>
@@ -744,27 +388,27 @@ body {
 
 
 document.addEventListener('DOMContentLoaded', function() {
-   
+    // Initialize performance distribution chart
     function initializePerformanceChart() {
         var ctx = document.getElementById('performanceDistChart');
-        if (!ctx) return;
+        if (!ctx) return; // Check if canvas exists
         
         ctx = ctx.getContext('2d');
         var performanceChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Low\n(≤ 2.0)', 'Moderate\n(2.1 - 4.0)', 'High\n(> 4.0)'],
+                labels: ['Low Performance\n(≤ 2.0)', 'Moderate Performance\n(2.1 - 4.0)', 'High Performance\n(> 4.0)'],
                 datasets: [{
-                    label: 'Number of Subjects (Performances)',
+                    label: 'Number of Subjects',
                     data: [
                         <?php echo isset($perf_distribution['low']) ? $perf_distribution['low'] : 0; ?>,
                         <?php echo isset($perf_distribution['moderate']) ? $perf_distribution['moderate'] : 0; ?>,
                         <?php echo isset($perf_distribution['high']) ? $perf_distribution['high'] : 0; ?>
                     ],
                     backgroundColor: [
-                        'rgba(220, 53, 69, 0.8)',
-                        'rgba(255, 193, 7, 0.8)',
-                        'rgba(13, 110, 253, 0.8)'
+                        'rgba(220, 53, 69, 0.8)',  // red for low
+                        'rgba(255, 193, 7, 0.8)',  // yellow for moderate
+                        'rgba(13, 110, 253, 0.8)'  // blue for high
                     ],
                     borderColor: [
                         'rgba(220, 53, 69, 1)',
@@ -776,7 +420,18 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        title: {
+                            display: true,
+                            text: 'Number of Subjects'
+                        }
+                    }
+                },
                 plugins: {
                     legend: {
                         display: false
@@ -789,82 +444,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const percentage = ((value / total) * 100).toFixed(1);
                                 return `Subjects: ${value} (${percentage}%)`;
                             }
-                        },
-                        titleFont: {
-                            size: 14
-                        },
-                        bodyFont: {
-                            size: 13
                         }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1,
-                            font: {
-                                size: 12
-                            }
-                        },
-                        grid: {
-                            display: true,
-                            drawBorder: false,
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        },
-                        title: {
-                            display: true,
-                            text: 'Number of Subjects',
-                            font: {
-                                size: 13
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            font: {
-                                size: 12
-                            }
-                        },
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                layout: {
-                    padding: {
-                        left: 10,
-                        right: 10,
-                        top: 20,
-                        bottom: 20
                     }
                 }
             }
         });
-
-        // Simplified resize handler
-        function handleResize() {
-            const container = document.querySelector('.chart-container');
-            if (window.innerWidth <= 768) {
-                container.style.height = '350px';
-            } else {
-                container.style.height = '450px';
-            }
-            performanceChart.resize();
-        }
-
-        window.addEventListener('resize', handleResize);
-        handleResize(); // Initial sizing
     }
 
+    // Call the initialization function
     initializePerformanceChart();
 });
-   
 
 
 
 $(document).ready(function() {
-    load_students();
+
     const text = '<?php echo $login_name; ?>';
     const speed = 50;
     let i = 0;
@@ -982,85 +576,6 @@ $.ajax({
 });
 }
 
-function load_students() {
-    $.ajax({
-        url: "ajax.php?action=get_students",
-        method: 'POST',
-        data: {
-            faculty_id: <?php echo $faculty_id ?>
-        },
-        success: function(response) {
-            try {
-                const students = JSON.parse(response);
-                let html = '';
-                
-                if (students.length > 0) {
-                    // Create the table structure
-                    html = `
-                        <div class="table-responsive">
-                            <table class="table table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Student ID</th>
-                                        <th>Name</th>
-                                        <th>Class</th>
-                                        <th>Subject</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                    
-                    // Add each student to the table
-                    students.forEach(student => {
-                        html += `
-                            <tr>
-                                <td>${student.school_id}</td>
-                                <td>${student.student_name}</td>
-                                <td>${student.class}</td>
-                                <td>${student.subject}</td>
-                            </tr>
-                        `;
-                    });
-                    
-                    html += `
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="text-muted">
-                            Total Students: ${students.length}
-                        </div>
-                    `;
-                } else {
-                    html = `
-                        <div class="alert alert-info">
-                            No students found for your classes this semester.
-                        </div>
-                    `;
-                }
-                
-                // Assuming you have a container with id 'student-list'
-                $('#student-list').html(html);
-                
-            } catch (e) {
-                console.error('Error parsing student data:', e);
-                $('#student-list').html(`
-                    <div class="alert alert-danger">
-                        Error loading student data. Please try again later.
-                    </div>
-                `);
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('AJAX Error:', error);
-            $('#student-list').html(`
-                <div class="alert alert-danger">
-                    Error loading student data. Please try again later.
-                </div>
-            `);
-        }
-    });
-}
-
 
     // Add ordinal suffix to numbers
     function ordinalSuffix(num) {
@@ -1081,8 +596,6 @@ function load_students() {
         var v = n % 100;
         return n + (s[(v - 20) % 10] || s[v] || s[0]);
     }
-
-    
 
     // Initial setup
     window.addEventListener('load', () => {

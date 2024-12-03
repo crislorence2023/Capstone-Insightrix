@@ -1,40 +1,6 @@
-<link href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css" rel="stylesheet">
-
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-     
-body{
-    width: 100%;
-}
-    .user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #0d6efd;
-    color: white;
-    font-weight: 500;
-    font-size: 14px;
-    text-transform: uppercase;
-    border: 2px solid #ffffff;
-}
 
-.user-avatar img {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-@media screen and (max-width: 768px) {
-    .user-avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-}
     body, .navbar, .dropdown-menu {
         font-family: 'Montserrat', sans-serif;
     }
@@ -258,39 +224,19 @@ body{
         max-width: 300px;
     }
 }
-
-/* Enlarge all icons */
-.navbar-nav .nav-link i {
-    font-size: 1.3rem; /* Adjust size as needed */
-}
-
-/* Specific styles for the logout icon and text */
-.logout-icon, .logout-text {
-    color: #b22222;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
 </style>
 
 <!-- Add this line in your header -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
 <!-- Navbar -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
 <nav class="main-header navbar navbar-expand navbar-light bg-white">
     <!-- Left navbar links -->
     <ul class="navbar-nav">
         <?php if(isset($_SESSION['login_id'])): ?>
         <li class="nav-item">
             <a class="nav-link" data-widget="pushmenu" href="#" role="button">
-                <i class="ri-menu-line"></i>
+                <i class="fa-solid fa-bars"></i>
             </a>
         </li>
         <?php endif; ?>
@@ -328,7 +274,7 @@ body{
     <?php if($_SESSION['login_type'] == 2): // Show only for faculty users (type 2) ?>
 <li class="nav-item dropdown">
     <a class="nav-link" href="#" id="notificationDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        <i class="ri-notification-3-line"></i>
+        <i class="fa-solid fa-bell"></i>
         <span class="notification-badge" id="notification-count" style="display: none;">0</span>
     </a>
     <div class="dropdown-menu dropdown-menu-right notification-dropdown" aria-labelledby="notificationDropdown">
@@ -336,10 +282,10 @@ body{
         <span class="font-weight-bold">Notifications</span>
         <div>
             <a href="#" class="action-btn mr-2" id="markAllRead">
-                <i class="ri-check-double-line"></i> Mark all read
+                <i class="fa-solid fa-check-double"></i> Mark all read
             </a>
             <a href="#" class="action-btn" id="deleteAllNotifications">
-                <i class="ri-delete-bin-line"></i> Clear all
+                <i class="fa-solid fa-trash"></i> Clear all
             </a>
         </div>
     </div>
@@ -352,7 +298,7 @@ body{
 <?php endif; ?>
         <li class="nav-item">
             <a class="nav-link" data-widget="fullscreen" href="#" role="button">
-                <i class="ri-fullscreen-line"></i>
+                <i class="fa-solid fa-expand"></i>
             </a>
         </li>
         <li class="nav-item dropdown">
@@ -363,68 +309,21 @@ body{
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
                 <span class="dropdown-item-text"><?php echo $_SESSION['login_name'] ?></span>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="javascript:void(0)" id="manage_account">
-                    <i class="ri-settings-3-line"></i> Manage Account
+                <a class="dropdown-item disabled" href="javascript:void(0)" id="manage_account">
+                    <i class="fa-solid fa-gear"></i> Manage Account
                 </a>
                 <a class="dropdown-item" href="ajax.php?action=logout">
-                    <i class="ri-logout-box-line logout-icon"></i> <span class="logout-text">Logout</span>
+                    <i class="fa-solid fa-power-off"></i> Logout
                 </a>
             </div>
         </li>
     </ul>
 </nav>
 <!-- /.navbar -->
-</body>
-</html>
 
 
 <script>
 $(document).ready(function(){
-
-    function createUserAvatar(name, imagePath) {
-    const container = document.createElement('div');
-    container.className = 'user-avatar';
-    
-    if (imagePath && imagePath !== 'default_avatar.jpg') {
-        const img = document.createElement('img');
-        img.src = 'assets/uploads/' + imagePath;
-        img.alt = name;
-        img.onerror = function() {
-            this.remove();
-            container.textContent = getInitials(name);
-        };
-        container.appendChild(img);
-    } else {
-        container.textContent = getInitials(name);
-    }
-    
-    return container;
-}
-
-function getInitials(name) {
-    return name
-        .split(' ')
-        .map(word => word.charAt(0))
-        .join('')
-        .slice(0, 2);
-}
-
-// Replace all avatar images with the new component
-document.addEventListener('DOMContentLoaded', function() {
-    const userImgElement = document.querySelector('.user-img');
-    if (userImgElement) {
-        const userName = document.querySelector('#navbarDropdown .ml-2').textContent.trim();
-        const avatarPath = userImgElement.getAttribute('src').split('/').pop();
-        const avatar = createUserAvatar(userName, avatarPath);
-        userImgElement.replaceWith(avatar);
-    }
-});
-
-
-
-
-
-
     $('#manage_account').click(function(){
         uni_modal('Manage Account','manage_user.php?id=<?php echo $_SESSION['login_id'] ?>');
     });

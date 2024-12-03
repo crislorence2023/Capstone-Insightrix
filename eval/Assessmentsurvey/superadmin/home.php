@@ -12,231 +12,109 @@ function ordinal_suffix($num){
     return $num.'th';
 }
 $astat = array("Not Yet Started","On-going","Closed");
-
-// Add this query to get the default academic year
-$default_academic = $conn->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
-
-// If no default is set, get the latest academic year
-if (!$default_academic) {
-    $default_academic = $conn->query("SELECT * FROM academic_list ORDER BY id DESC LIMIT 1")->fetch_assoc();
-}
-
-// Update the session with the current academic year info
-$_SESSION['academic'] = $default_academic;
 ?>
 
-<div class="dashboard-container">
-    <!-- Header Section -->
-    <div class="header-card">
-        <div class="header-content">
-            <div class="semester-info">
-                <h4>Academic Year</h4>
-                <h2><?php echo $default_academic['year'].' '.(ordinal_suffix($default_academic['semester'])) ?> Semester</h2>
-            </div>
-            <div class="status-badge <?php echo strtolower(str_replace(' ', '-', $astat[$default_academic['status']])) ?>">
-                <?php echo $astat[$default_academic['status']] ?>
-            </div>
-        </div>
+<div class="container-fluid">
+  <div class="col-12">
+    <div class="card bg-teal-700 text-white mb-4">
+      <div class="card-body">
+        <h5 class="font-weight-bold">Academic Year: <?php echo $_SESSION['academic']['year'].' '.(ordinal_suffix($_SESSION['academic']['semester'])) ?> Semester</h5>
+        <h6 class="mb-0">Evaluation Status: <?php echo $astat[$_SESSION['academic']['status']] ?></h6>
+      </div>
     </div>
-
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-        <div class="stat-card faculty">
-            <div class="stat-content">
-                <div class="stat-icon">
-                    <i class="fas fa-user-tie"></i>
-                </div>
-                <div class="stat-details">
-                    <h3><?php echo $conn->query("SELECT * FROM faculty_list")->num_rows; ?></h3>
-                    <p>Faculty Members</p>
-                </div>
-            </div>
-            <div class="stat-footer">
-                <a href="./indexsuperadmin.php?page=faculty_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
-            </div>
+  </div>
+  
+  <div class="row">
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="small-box shadow-sm border">
+        <div class="inner">
+          <h3><?php echo $conn->query("SELECT * FROM faculty_list")->num_rows; ?></h3>
+          <p>Total Faculties</p>
         </div>
-
-        <div class="stat-card students">
-            <div class="stat-content">
-                <div class="stat-icon">
-                    <i class="fas fa-user-graduate"></i>
-                </div>
-                <div class="stat-details">
-                    <h3><?php echo $conn->query("SELECT * FROM student_list")->num_rows; ?></h3>
-                    <p>Students</p>
-                </div>
-            </div>
-            <div class="stat-footer">
-                <a href="./indexsuperadmin.php?page=student_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
-            </div>
+        <div class="icon">
+          <i class="fas fa-user-tie"></i>
         </div>
-
-        <div class="stat-card users">
-            <div class="stat-content">
-                <div class="stat-icon">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="stat-details">
-                    <h3><?php echo $conn->query("SELECT * FROM users")->num_rows; ?></h3>
-                    <p>Total Users</p>
-                </div>
-            </div>
-            <div class="stat-footer">
-                <a href="./indexsuperadmin.php?page=user_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
-            </div>
-        </div>
-
-        <div class="stat-card classes">
-            <div class="stat-content">
-                <div class="stat-icon">
-                    <i class="fas fa-chalkboard"></i>
-                </div>
-                <div class="stat-details">
-                    <h3><?php echo $conn->query("SELECT * FROM class_list")->num_rows; ?></h3>
-                    <p>Active Classes</p>
-                </div>
-            </div>
-            <div class="stat-footer">
-                <a href="./indexsuperadmin.php?page=class_list" class="view-details">View Details <i class="fas fa-arrow-right"></i></a>
-            </div>
-        </div>
+      </div>
     </div>
+    
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="small-box shadow-sm border">
+        <div class="inner">
+          <h3><?php echo $conn->query("SELECT * FROM student_list")->num_rows; ?></h3>
+          <p>Total Students</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-user-graduate"></i>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="small-box shadow-sm border">
+        <div class="inner">
+          <h3><?php echo $conn->query("SELECT * FROM users")->num_rows; ?></h3>
+          <p>Total Users</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-users"></i>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-12 col-sm-6 col-md-3">
+      <div class="small-box shadow-sm border">
+        <div class="inner">
+          <h3><?php echo $conn->query("SELECT * FROM class_list")->num_rows; ?></h3>
+          <p>Total Classes</p>
+        </div>
+        <div class="icon">
+          <i class="fas fa-chalkboard"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
-.dashboard-container {
-    padding: 2rem;
-    background-color: #f8f9fa;
-    min-height: 100vh;
+  .container-fluid{
+  
+  }
+.small-box {
+  position: relative;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  background-color: #FAFEFF;
 }
 
-.header-card {
-    background: linear-gradient(135deg, #1a6d8f, #3ba4d9);
-
-    border-radius: 15px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+.small-box .inner {
+  padding: 10px;
 }
 
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: white;
+.small-box .icon {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 40px;
+  color: rgba(0,0,0,0.15);
 }
 
-.semester-info h4 {
-    margin: 0;
-    opacity: 0.9;
-    font-size: 1rem;
+.small-box h3 {
+  font-size: 38px;
+  font-weight: bold;
+  margin: 0 0 10px 0;
+  white-space: nowrap;
+  padding: 0;
 }
 
-.semester-info h2 {
-    margin: 0.5rem 0 0 0;
-    font-size: 1.8rem;
-    font-weight: 600;
+.small-box p {
+  font-size: 15px;
+  margin-bottom: 0;
 }
 
-.status-badge {
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-weight: 500;
-    font-size: 0.9rem;
-    background: rgba(255, 255, 255, 0.2);
-}
+.bg-teal-700 {
+  background: linear-gradient(135deg, #FF8C00, #FF4500);
 
-.status-badge.not-yet-started { background-color: #ffd700; color: #000; }
-.status-badge.on-going { background-color: #00ff7f; color: #000; }
-.status-badge.closed { background-color: #ff6b6b; color: white; }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 15px;
-    padding: 1.5rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stat-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    font-size: 1.5rem;
-}
-
-.faculty .stat-icon { background-color: #e3f2fd; color: #1976d2; }
-.students .stat-icon { background-color: #f3e5f5; color: #7b1fa2; }
-.users .stat-icon { background-color: #e8f5e9; color: #388e3c; }
-.classes .stat-icon { background-color: #fff3e0; color: #f57c00; }
-
-.stat-details h3 {
-    margin: 0;
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #2c3e50;
-}
-
-.stat-details p {
-    margin: 0.25rem 0 0 0;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.stat-footer {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-}
-
-.view-details {
-    text-decoration: none;
-    color: #666;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    transition: color 0.2s;
-}
-
-.view-details:hover {
-    color: #2193b0;
-}
-
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 1rem;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .stat-card {
-        padding: 1rem;
-    }
 }
 </style>

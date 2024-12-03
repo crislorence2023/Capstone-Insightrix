@@ -1,7 +1,6 @@
 <?php
 session_start();
-// Check for either regular login_id or temp_user_id
-if(!isset($_SESSION['login_id']) && !isset($_SESSION['temp_user_id'])) {
+if(!isset($_SESSION['login_id'])) {
     header("location:login.php");
     exit;
 }
@@ -9,8 +8,6 @@ if(!isset($_SESSION['login_id']) && !isset($_SESSION['temp_user_id'])) {
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
-
-
 ?>
 
 <!DOCTYPE html>
@@ -199,196 +196,206 @@ header("Pragma: no-cache");
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
-        $(document).ready(function(){
-            // Continuously push a new state to the history stack
-            function preventBack() {
-                window.history.pushState(null, null, window.location.href);
+
+ window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function() {
+        // Clear any session data
+        $.ajax({
+            url: 'ajax.php?action=logout',
+            method: 'POST',
+            success: function() {
+                window.location.replace('login.php');
+            },
+            error: function() {
+                window.location.replace('login.php');
             }
+        });
+    };
 
-            preventBack();
-
-            window.onpopstate = function() {
-                // Logout and redirect to login page
-                window.location.replace('ajax.php?action=logout');
-            };
-
-            // Call preventBack every time the user tries to navigate back
-            setInterval(preventBack, 100);
-
-            // Additional security: Disable right-click context menu
-            document.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-            });
-
-            // Prevent going back using keyboard shortcuts and logout
-            document.addEventListener('keydown', function(e) {
-                if ((e.key === 'Backspace' || e.key === 'Back') && e.target === document.body) {
-                    e.preventDefault();
-                    window.location.replace('ajax.php?action=logout');
+    $(document).ready(function(){
+    // Prevent going back
+    window.history.pushState(null, null, window.location.href);
+    window.onpopstate = function() {
+        // Clear session and redirect to login
+        $.ajax({
+            url: 'ajax.php?action=logout_change_password',
+            method: 'POST',
+            success: function(resp) {
+                if(resp == 1) {
+                    window.location.replace('login.php');
                 }
-            });
-
-            // Check if user is trying to access the student dashboard
-            if (window.location.pathname.includes('student_dashboard.php')) {
-                window.location.replace('ajax.php?action=logout');
+            },
+            error: function() {
+                window.location.replace('login.php');
             }
+        });
+    };
 
-            let isVerified = false;
-            let timerInterval;
-            const COOLDOWN_TIME = 60; // Cooldown time in seconds
-            let timeLeft = 0;
 
-            function startTimer() {
-                const sendCodeBtn = $('#send-code');
-                timeLeft = COOLDOWN_TIME;
-                sendCodeBtn.prop('disabled', true);
-                sendCodeBtn.text('Resend Verification Code?');
-                
+        let isVerified = false;
+        let timerInterval;
+        const COOLDOWN_TIME = 60; // Cooldown time in seconds
+        let timeLeft = 0;
+
+        function startTimer() {
+            const sendCodeBtn = $('#send-code');
+            timeLeft = COOLDOWN_TIME;
+            sendCodeBtn.prop('disabled', true);
+            sendCodeBtn.text('Resend Verification Code?');
+            
+            updateTimerDisplay();
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
                 updateTimerDisplay();
                 
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    updateTimerDisplay();
-                    
-                    if (timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        sendCodeBtn.prop('disabled', false);
-                        $('#timer').text('');
-                    }
-                }, 1000);
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    sendCodeBtn.prop('disabled', false);
+                    $('#timer').text('');
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            $('#timer').text(`Resend code in ${formattedTime}`);
+        }
+
+        
+
+        $('#send-code').click(function() {
+            let email = $('#email').val();
+            if (!email) {
+                alert("Please enter your email address.");
+                return;
             }
 
-            function updateTimerDisplay() {
-                const minutes = Math.floor(timeLeft / 60);
-                const seconds = timeLeft % 60;
-                const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                $('#timer').text(`Resend code in ${formattedTime}`);
-            }
-
-            
-
-            $('#send-code').click(function() {
-                let email = $('#email').val();
-                if (!email) {
-                    alert("Please enter your email address.");
-                    return;
-                }
-
-                $.ajax({
-                    url: 'ajax.php?action=send_verification',
-                    method: 'POST',
-                    data: { email: email },
-                    success: function(resp) {
-                        switch(parseInt(resp)) {
-                            case 1:
-                                alert("Verification code sent to your email.");
-                                startTimer();
-                                break;
-                            case 2:
-                                alert("Failed to update verification code. Please try again.");
-                                break;
-                            case 3:
-                                alert("Failed to send verification code. Please try again.");
-                                break;
-                            case 4:
-                                alert("This email address is already registered in the system. Please use a different email.");
-                                $('#email').val('');
-                                break;
-                            default:
-                                alert("An error occurred. Please try again.");
-                        }
-                    },
-                    error: function() {
-                        alert("Connection error. Please try again.");
+            $.ajax({
+                url: 'ajax.php?action=send_verification',
+                method: 'POST',
+                data: { email: email },
+                success: function(resp) {
+                    switch(parseInt(resp)) {
+                        case 1:
+                            alert("Verification code sent to your email.");
+                            startTimer();
+                            break;
+                        case 2:
+                            alert("Failed to update verification code. Please try again.");
+                            break;
+                        case 3:
+                            alert("Failed to send verification code. Please try again.");
+                            break;
+                        case 4:
+                            alert("This email address is already registered in the system. Please use a different email.");
+                            $('#email').val('');
+                            break;
+                        default:
+                            alert("An error occurred. Please try again.");
                     }
-                });
-            });
-
-            $('#verify-code').click(function() {
-                let code = $('#verification_code').val();
-                
-                if (!code) {
-                    alert("Please enter verification code.");
-                    return;
+                },
+                error: function() {
+                    alert("Connection error. Please try again.");
                 }
-
-                $.ajax({
-                    url: 'ajax.php?action=verify_code',
-                    method: 'POST',
-                    data: { verification_code: code },
-                    success: function(resp) {
-                        if(resp == 1) {
-                            isVerified = true;
-                            $('.verification-status').html('<div class="alert alert-success">Verification successful! You can now change your password.</div>');
-                            $('#password-fields').removeClass('hidden');
-                            clearInterval(timerInterval);
-                            $('#timer').text('');
-                            $('#send-code').prop('disabled', true);
-                        } else {
-                            isVerified = false;
-                            $('.verification-status').html('<div class="alert alert-danger">Incorrect verification code or code has expired. Please try again.</div>');
-                        }
-                    },
-                    error: function() {
-                        alert("Connection error. Please try again.");
-                    }
-                });
-            });
-
-            $('#change-password-form').submit(function(e){
-                e.preventDefault();
-                
-                if (!isVerified) {
-                    alert("Please verify your email first.");
-                    return;
-                }
-
-                let newPass = $('#new_password').val();
-                let confirmPass = $('#confirm_password').val();
-
-                if (newPass !== confirmPass) {
-                    alert("Passwords do not match!");
-                    return;
-                }
-
-                let submitBtn = $(this).find('button[type="submit"]');
-                submitBtn.prop('disabled', true);
-
-                $.ajax({
-                    url: 'ajax.php?action=change_password',
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    success: function(resp) {
-                        switch(parseInt(resp)) {
-                            case 1:
-                                $('.change-password-container').html(`
-                                    <div class="alert alert-success">
-                                        Password and email updated successfully!
-                                    </div>
-                                    <button onclick="window.location.href='login.php'" style="margin-top: 20px;">
-                                        Proceed to Login
-                                    </button>
-                                `);
-                                break;
-                            case 2:
-                                alert("Password does not meet requirements. It must be at least 8 characters long, contain uppercase and lowercase letters, numbers, and special characters.");
-                                break;
-                            case 3:
-                                alert("This email address is already registered to another user. Please use a different email address.");
-                                break;
-                            default:
-                                alert("An error occurred. Please try again.");
-                        }
-                    },
-                    error: function() {
-                        alert("Connection error. Please try again.");
-                    },
-                    complete: function() {
-                        submitBtn.prop('disabled', false);
-                    }
-                });
             });
         });
+
+        $('#verify-code').click(function() {
+            let code = $('#verification_code').val();
+            
+            if (!code) {
+                alert("Please enter verification code.");
+                return;
+            }
+
+            $.ajax({
+                url: 'ajax.php?action=verify_code',
+                method: 'POST',
+                data: { verification_code: code },
+                success: function(resp) {
+                    if(resp == 1) {
+                        isVerified = true;
+                        $('.verification-status').html('<div class="alert alert-success">Verification successful! You can now change your password.</div>');
+                        $('#password-fields').removeClass('hidden');
+                        clearInterval(timerInterval);
+                        $('#timer').text('');
+                        $('#send-code').prop('disabled', true);
+                    } else {
+                        isVerified = false;
+                        $('.verification-status').html('<div class="alert alert-danger">Incorrect verification code or code has expired. Please try again.</div>');
+                    }
+                },
+                error: function() {
+                    alert("Connection error. Please try again.");
+                }
+            });
+        });
+
+        $('#change-password-form').submit(function(e){
+            e.preventDefault();
+            
+            if (!isVerified) {
+                alert("Please verify your email first.");
+                return;
+            }
+
+            let newPass = $('#new_password').val();
+            let confirmPass = $('#confirm_password').val();
+
+            if (newPass !== confirmPass) {
+                alert("Passwords do not match!");
+                return;
+            }
+
+            let submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true);
+
+            $.ajax({
+                url: 'ajax.php?action=change_password',
+                method: 'POST',
+                data: $(this).serialize(),
+                success: function(resp) {
+                    switch(parseInt(resp)) {
+                        case 1:
+                            alert("Password and email updated successfully!");
+                            // Redirect to login page and clear history
+                            window.location.replace('login.php'); // Replace with your login page URL
+                            break;
+                        case 2:
+                            alert("Password does not meet requirements. It must be at least 8 characters long, contain uppercase and lowercase letters, numbers, and special characters.");
+                            break;
+                        case 3:
+                            alert("This email address is already registered to another user. Please use a different email address.");
+                            break;
+                        default:
+                            alert("An error occurred. Please try again.");
+                    }
+                },
+                error: function() {
+                    alert("Connection error. Please try again.");
+                },
+                complete: function() {
+                    submitBtn.prop('disabled', false);
+                }
+            });
+        });
+
+        // Additional security: Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Prevent going back using keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if ((e.key === 'Backspace' || e.key === 'Back') && e.target === document.body) {
+                e.preventDefault();
+                window.location.replace('login.php'); // Replace with your login page URL
+            }
+        });
+    });
     </script>
 </body>
 </html>

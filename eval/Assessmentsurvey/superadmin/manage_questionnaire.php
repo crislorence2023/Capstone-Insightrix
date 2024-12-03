@@ -21,9 +21,9 @@ function ordinal_suffix($num){
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-4" id="form-section" style="position: sticky; top: 20px; height: calc(100vh - 40px); overflow-y: auto;">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <b></i>Criteria and Question Form</b>
+            <div class="card card-info card-primary">
+                <div class="card-header">
+                    <b>Criteria and Question Form</b>
                 </div>
                 <div class="card-body">
                     <form action="" id="manage-criteria">
@@ -32,13 +32,9 @@ function ordinal_suffix($num){
                             <label for="">Criteria</label>
                             <input type="text" name="criteria" class="form-control form-control-sm">
                         </div>
-                        <div class="d-flex justify-content-end gap-2">
-                            <button class="btn btn-primary" form="manage-criteria">
-                                <i class="fas fa-save mr-2"></i>Save Criteria
-                            </button>
-                            <button class="btn btn-secondary" form="manage-criteria" type="reset">
-                                <i class="fas fa-times mr-2"></i>Cancel
-                            </button>
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-sm btn-primary btn-flat bg-gradient-primary mx-1" form="manage-criteria">Save Criteria</button>
+                            <button class="btn btn-sm btn-flat btn-secondary bg-gradient-secondary mx-1" form="manage-criteria" type="reset">Cancel</button>
                         </div>
                     </form>
                     <hr>
@@ -70,21 +66,17 @@ function ordinal_suffix($num){
             </div>
         </div>
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <b>Evaluation Questionnaire for Academic: <?php echo $year.' '.(ordinal_suffix($semester)) ?></b>
+            <div class="card card-outline card-info">
+                <div class="card-header">
+                    <b>Evaluation Questionnaire for Academic: <?php echo $year.' '.(ordinal_suffix($semester)) ?> </b>
                     <div class="card-tools">
-                        <button class="btn btn-primary" id="eval_restrict" type="button">
-                            Assign Evaluation
-                        </button>
-                        <button class="btn btn-success" id="save-order">
-                            <i class="fas fa-save mr-2"></i>Save Order
-                        </button>
+                        <button class="btn btn-sm btn-flat btn-primary bg-gradient-primary mx-1" id="eval_restrict" type="button">Assign Evaluation</button>
+                        <button class="btn btn-sm btn-flat btn-success bg-gradient-success mx-1" id="save-order">Save Order</button>
                     </div>
                 </div>
                 <div class="card-body">
                     <fieldset class="border border-info p-2 w-100">
-                        <legend class="w-auto text-bold">Rating Legend</legend>
+                        <legend class="w-auto">Rating Legend</legend>
                         <p>5 = Strongly Agree, 4 = Agree, 3 = Uncertain, 2 = Disagree, 1 = Strongly Disagree</p>
                     </fieldset>
                     <form id="order-question">
@@ -96,69 +88,60 @@ function ordinal_suffix($num){
                                 while($crow = $criteria->fetch_assoc()):
                             ?>
                             <div class="criteria-item" data-id="<?php echo $crow['id']; ?>">
-                                <div class="criteria-group">
-                                    <div class="criteria-header d-flex justify-content-between align-items-center">
-                                        <b class="text-bold"><?php echo $crow['criteria'] ?></b>
-                                        <div class="criteria-actions">
-                                            <button class="btn btn-sm btn-link edit-criteria" data-id="<?php echo $crow['id'] ?>">
-                                                <i class="fa fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-link text-danger delete-criteria" data-id="<?php echo $crow['id'] ?>">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="questions-container">
-                                        <table class="table table-condensed criteria-table">
-                                            <thead>
-                                                <tr class="bg-light">
-                                                    <th class="text-center" width="5%"><i class="fa fa-bars"></i></th>
-                                                    <th width="40%">Question</th>
-                                                    <th class="text-center">1</th>
-                                                    <th class="text-center">2</th>
-                                                    <th class="text-center">3</th>
-                                                    <th class="text-center">4</th>
-                                                    <th class="text-center">5</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="tr-sortable">
-                                                <?php 
-                                                $questions = $conn->query("SELECT * FROM question_list where criteria_id = {$crow['id']} and academic_id = $id order by abs(order_by) asc ");
-                                                while($row=$questions->fetch_assoc()):
-                                                $q_arr[$row['id']] = $row;
-                                                ?>
-                                                <tr class="bg-white">
-                                                    <td class="p-1 text-center" width="5px">
-                                                        <span class="btn-group dropright">
-                                                          <span type="button" class="btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                           <i class="fa fa-ellipsis-v"></i>
-                                                          </span>
-                                                          <div class="dropdown-menu">
-                                                             <a class="dropdown-item edit_question" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>">Edit</a>
-                                                              <div class="dropdown-divider"></div>
-                                                             <a class="dropdown-item delete_question" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>">Delete</a>
-                                                          </div>
-                                                        </span>
-                                                    </td>
-                                                    <td class="p-1" width="40%">
-                                                        <?php echo $row['question'] ?>
-                                                        <input type="hidden" name="qid[]" value="<?php echo $row['id'] ?>">
-                                                    </td>
-                                                    <?php for($c=0;$c<5;$c++): ?>
-                                                    <td class="text-center">
-                                                        <div class="icheck-success d-inline">
-                                                            <input type="radio" name="rate[<?php echo $row['id'] ?>]" id="qradio<?php echo $row['id'].'_'.$c ?>" value="<?php echo 5-$c ?>">
-                                                            <label for="qradio<?php echo $row['id'].'_'.$c ?>">
-                                                            </label>
-                                                        </div>
-                                                    </td>
-                                                    <?php endfor; ?>
-                                                </tr>
-                                                <?php endwhile; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                <table class="table table-condensed criteria-table">
+                                    <thead>
+                                        <tr class="bg-gradient-secondary">
+                                            <th class="text-center" width="5%"><i class="fa fa-bars"></i></th>
+                                            <th width="30%">
+                                                <b><?php echo $crow['criteria'] ?></b>
+                                                <span class="float-right">
+                                                    <a href="javascript:void(0)" class="edit-criteria" data-id="<?php echo $crow['id'] ?>"><i class="fa fa-edit"></i></a>
+                                                    <a href="javascript:void(0)" class="delete-criteria" data-id="<?php echo $crow['id'] ?>"><i class="fa fa-trash"></i></a>
+                                                </span>
+                                            </th>
+                                            <th class="text-center">1</th>
+                                            <th class="text-center">2</th>
+                                            <th class="text-center">3</th>
+                                            <th class="text-center">4</th>
+                                            <th class="text-center">5</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="tr-sortable">
+                                        <?php 
+                                        $questions = $conn->query("SELECT * FROM question_list where criteria_id = {$crow['id']} and academic_id = $id order by abs(order_by) asc ");
+                                        while($row=$questions->fetch_assoc()):
+                                        $q_arr[$row['id']] = $row;
+                                        ?>
+                                        <tr class="bg-white">
+                                            <td class="p-1 text-center" width="5px">
+                                                <span class="btn-group dropright">
+                                                  <span type="button" class="btn" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                   <i class="fa fa-ellipsis-v"></i>
+                                                  </span>
+                                                  <div class="dropdown-menu">
+                                                     <a class="dropdown-item edit_question" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>">Edit</a>
+                                                      <div class="dropdown-divider"></div>
+                                                     <a class="dropdown-item delete_question" href="javascript:void(0)" data-id="<?php echo $row['id'] ?>">Delete</a>
+                                                  </div>
+                                                </span>
+                                            </td>
+                                            <td class="p-1" width="40%">
+                                                <?php echo $row['question'] ?>
+                                                <input type="hidden" name="qid[]" value="<?php echo $row['id'] ?>">
+                                            </td>
+                                            <?php for($c=0;$c<5;$c++): ?>
+                                            <td class="text-center">
+                                                <div class="icheck-success d-inline">
+                                                    <input type="radio" name="rate[<?php echo $row['id'] ?>]" id="qradio<?php echo $row['id'].'_'.$c ?>" value="<?php echo 5-$c ?>">
+                                                    <label for="qradio<?php echo $row['id'].'_'.$c ?>">
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <?php endfor; ?>
+                                        </tr>
+                                        <?php endwhile; ?>
+                                    </tbody>
+                                </table>
                             </div>
                             <?php endwhile; ?>
                         </div>
@@ -192,9 +175,7 @@ $(document).ready(function() {
     $('.tr-sortable').sortable();
 
     // Edit question
-    $(document).on('click', '.edit_question', function(e){
-        e.preventDefault();
-        e.stopPropagation();
+    $(document).on('click', '.edit_question', function(){
         var id = $(this).attr('data-id');
         var question = <?php echo json_encode($q_arr) ?>;
         $('#manage-question').find("[name='id']").val(question[id].id);
@@ -204,9 +185,7 @@ $(document).ready(function() {
     });
 
     // Delete question
-    $(document).on('click', '.delete_question', function(e){
-        e.preventDefault();
-        e.stopPropagation();
+    $(document).on('click', '.delete_question', function(){
         var questionId = $(this).attr('data-id');
         confirmDeleteQuestion(questionId);
     });
@@ -214,9 +193,7 @@ $(document).ready(function() {
 	var originalCriteria = ''; // Variable to store the original criteria value
 
     // Edit criteria
-    $(document).on('click', '.edit-criteria', function(e){
-        e.preventDefault();
-        e.stopPropagation();
+    $(document).on('click', '.edit-criteria', function(){
         var id = $(this).attr('data-id');
         $.ajax({
             url: 'ajax.php?action=get_criteria',
@@ -245,9 +222,7 @@ $(document).ready(function() {
     });
 
     // Delete criteria
-    $(document).on('click', '.delete-criteria', function(e){
-        e.preventDefault();
-        e.stopPropagation();
+    $(document).on('click', '.delete-criteria', function(){
         var criteriaId = $(this).attr('data-id');
         confirmDeleteCriteria(criteriaId);
     });
@@ -498,362 +473,40 @@ $(document).ready(function() {
 </script>
 
 <style>
-/* Modern Color Scheme and Variables */
-:root {
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary: #64748b;
-    --success: #059669;
-    --danger: #dc2626;
-    --background: #f8fafc;
-    --surface: #ffffff;
-    --text: #1e293b;
-    --text-light: #64748b;
-    --border: #e2e8f0;
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+.sticky-top {
+    position: sticky;
+    top: 20px;
+    z-index: 1020;
 }
 
-/* Global Resets and Base Styles */
-body {
-    background-color: var(--background);
-    color: var(--text);
-    line-height: 1.5;
+.highlight-question {
+    animation: highlightFade 3s;
 }
 
-/* Card Styling */
-.card {
-    
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
-    margin-bottom: 1.5rem;
-    border-radius: 15px;
+@keyframes highlightFade {
+    0% { background-color: #fffacd; }
+    100% { background-color: transparent; }
 }
 
-.card-header {
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    font-weight: 600;
-    color:#1F2D3D;
-            font-size: 20px;
-            font-weight: 600;
-   
-}
-
-.card-body {
-    padding: 1.5rem;
-}
-
-/* Form Controls */
-.form-control, .custom-select {
-    padding: 0.625rem 0.875rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    transition: all 0.2s ease;
-}
-
-.form-control:focus, .custom-select:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-    outline: none;
-}
-
-.form-group {
-    margin-bottom: 1.25rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-}
-
-/* Button Styles */
-.btn {
-
-  
-            font-size: 14px;
-            font-weight: 400;
-
-
-    padding: 10px;
-    
-    
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: none;
-}
-
-.btn i {
-    font-size: 1rem;
-}
-
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-
-.btn-primary:hover {
-    background: var(--primary-hover);
-}
-
-.btn-secondary {
-    background: var(--secondary);
-    color: white;
-}
-
-.btn-success {
-    background: var(--success);
-    color: white;
-}
-
-.p-1{
-  
-}
-
-/* Table Styling */
-.criteria-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin-bottom: 1rem;
-}
-
-.criteria-table th {
-    background: var(--background);
-    padding: 0.875rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-    text-align: left;
-}
-
-.criteria-table td {
-    padding: 1rem;
-    border-top: 1px solid var(--border);
-    font-size: 0.875rem;
-    vertical-align: middle;
-}
-
-/* Radio Buttons */
-.icheck-success {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.icheck-success input[type="radio"] {
-    appearance: none;
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 2px solid var(--border);
-    border-radius: 50%;
-    margin: 0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.icheck-success input[type="radio"]:checked {
-    border-color: var(--success);
-    background-color: var(--success);
-    box-shadow: inset 0 0 0 4px var(--surface);
-}
-
-/* Spacing and Layout */
-.d-flex {
-    gap: 0.75rem;
-}
-
-.card-tools {
-    display: flex;
-    gap: 0.75rem;
-}
-
-/* Rating Legend */
-fieldset.border {
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-md);
-    padding: 1.25rem !important;
-    margin-bottom: 1.5rem;
-}
-
-fieldset legend {
-    padding: 0 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text);
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .card-header {
-        padding: 1rem;
-    }
-    
-    .card-body {
-        padding: 1rem;
-    }
-    
-    .btn {
-        width: auto;
-        padding: 0.5rem 0.875rem;
-    }
-    
-    .d-flex {
-        gap: 0.5rem;
-    }
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(0.5rem);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+#criteria-list .fa-bars {
+    cursor: move;
 }
 
 .criteria-item {
-    animation: fadeIn 0.3s ease-out;
-   
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 
-.text-bold{
-    color:#1F2D3D;
-            font-size: 16px;
-            font-weight: 600;
-}
-
-/* Toast Notification Improvements */
-.toast {
-    font-size: 1rem !important;  /* Base font size */
-    max-width: 400px !important;
-    opacity: 1 !important;
-}
-
-.toast-header {
-    font-size: 1.1rem !important;
-    font-weight: 600 !important;
-    padding: 0.75rem 1rem !important;
-}
-
-.toast-body {
-    font-size: 0.95rem !important;
-    padding: 1rem !important;
-    line-height: 1.5 !important;
-}
-
-/* Toast variants */
-.toast-success .toast-header {
-    background-color: var(--success) !important;
-    color: white !important;
-}
-
-.toast-error .toast-header {
-    background-color: var(--danger) !important;
-    color: white !important;
-}
-
-/* Toast animation */
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.toast {
-    animation: slideInRight 0.3s ease-out;
-}
-
-/* Ensure toast is above other elements */
-.toast-container {
-    z-index: 9999 !important;
-}
-
-/* Add new styles for criteria groups */
-.criteria-group {
-    background: #ffffff;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    margin-bottom: 1.5rem;
-    box-shadow: var(--shadow);
-}
-
-.criteria-header {
-    background: #f8fafc;
-    padding: 1rem;
-    border-radius: var(--radius-sm);
-    margin-bottom: 1rem;
-    border: 1px solid var(--border);
-}
-
-.criteria-actions {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.criteria-actions .btn-link {
-    padding: 0.25rem 0.5rem;
-    color: var(--text);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.criteria-actions .btn-link:hover {
-    transform: scale(1.1);
-}
-
-.criteria-actions .text-danger:hover {
-    color: var(--danger) !important;
-}
-
-.questions-container {
-    background: #ffffff;
-    border-radius: var(--radius-sm);
-    padding: 1rem;
-    border: 1px solid var(--border);
-}
-
-/* Update table styles */
 .criteria-table {
     margin-bottom: 0;
 }
 
-.criteria-table thead th {
-    background: #f8fafc;
-    border-bottom: 2px solid var(--border);
-    padding: 0.75rem;
-    font-weight: 600;
-}
-
-.criteria-table tbody td {
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--border);
-}
-
-/* Add hover effect for better UX */
-.criteria-group:hover {
-    box-shadow: var(--shadow-md);
+@media (max-width: 768px) {
+    #form-section {
+        position: static !important;
+        height: auto !important;
+        overflow-y: visible !important;
+    }
 }
 </style>
