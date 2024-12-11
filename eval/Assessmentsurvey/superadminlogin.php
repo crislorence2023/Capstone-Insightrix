@@ -7,7 +7,7 @@
       $_SESSION['system'][$k] = $v;
     }
     ob_end_flush();
-    if(isset($_SESSION['login_id'])) header("location:indexsuperadmin.php?page=home");
+    if(isset($_SESSION['login_id'])) header("location:index.php?page=home");
     ?>
 
 
@@ -183,6 +183,82 @@
             margin-top: 1.5rem;
         }
 
+        .error-box {
+    display: none;
+    background-color: #ffebee;
+    border: 1px solid #ef5350;
+    color: #c62828;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+    animation: fadeIn 0.05s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.error-box.show {
+    display: block;
+}
+
+.validation-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    display: none;
+    letter-spacing: 0.5px;
+    padding-left: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.input-group {
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.input-group input {
+    margin-bottom: 0;
+}
+
+.input-error {
+    border-color: #dc3545 !important;
+    background-color: #fff;
+    box-shadow: none !important;
+}
+
+.input-error:focus {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+.validation-message.show {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
        
 
        
@@ -195,20 +271,27 @@
     
     <div class="login-container">
         <h1>Insightrix | <span style="color: teal;">LOGIN superadmin<span></h1>
-        <form action="" id="login-form">
-          <div class="email-container">
-          <input type="text" id="identifier" name="identifier" placeholder="School ID/ Email" required>
-          </div>
+        <div class="error-box" id="error-message"></div>
+        <form action="" id="login-form" novalidate>
+            <div class="input-group">
+                <div class="email-container">
+                    <input type="text" id="identifier" name="identifier" placeholder="School ID/ Email">
+                    <div class="validation-message" id="identifier-error">Please enter your School ID or Email</div>
+                </div>
+            </div>
             
-          <div class="password-container">
-    <input type="password" name="password" placeholder="Password" required>
-    <button type="button" class="toggle-password" aria-label="Toggle password visibility">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-        </svg>
-    </button>
-</div>
-          
+            <div class="input-group">
+                <div class="password-container">
+                    <input type="password" id="password" name="password" placeholder="Password">
+                    <button type="button" class="toggle-password" aria-label="Toggle password visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                        </svg>
+                    </button>
+                    <div class="validation-message" id="password-error">Please enter your password</div>
+                </div>
+            </div>
+            
             <a href="forgot.php" class="forgot-password">Forgot Password?</a>
             
 
@@ -232,42 +315,94 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
     $(document).ready(function(){
-    $('#login-form').submit(function(e){
-        e.preventDefault();
-        $.ajax({
-            url:'ajax.php?action=login3',
-            method:'POST',
-            data:$(this).serialize(),
-            error:err=>{
-                console.log(err)
-            },
-            success:function(resp){
-                if(resp == 1){
-                    location.href ='indexsuperadmin.php?page=home';
-                } else if(resp == 2){
-                    alert("Username or password is incorrect.");
-                } else if(resp == 3){
-                    // Use replace instead of href to prevent browser back button
-                    window.location.replace('change_password.php');
+        let formSubmitted = false;
+
+        // Custom validation function
+        function validateField(field, showError = false) {
+            const $field = $(field);
+            const $error = $(`#${field.id}-error`);
+            
+            if (!field.value.trim()) {
+                if (showError || formSubmitted) {
+                    $field.addClass('input-error');
+                    $error.addClass('show');
                 }
+                return false;
+            } else {
+                $field.removeClass('input-error');
+                $error.removeClass('show');
+                return true;
+            }
+        }
+
+        function showError(message) {
+            const errorBox = $('#error-message');
+            errorBox.text(message);
+            errorBox.addClass('show');
+            
+            setTimeout(() => {
+                errorBox.removeClass('show');
+            }, 5000);
+        }
+
+        $('#identifier, #password').on('blur', function() {
+            if (formSubmitted) {
+                validateField(this);
             }
         });
-    });
-            $('.toggle-password').click(function() {
-                const passwordField = $(this).siblings('input');
-                const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
-                passwordField.attr('type', type);
-                $(this).find('svg').attr('viewBox', type === 'password' ? '0 0 24 24' : '0 0 24 24');
-                $(this).find('path').attr('d', type === 'password' 
-                    ? 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'
-                    : 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z'
-                );
+
+        $('#identifier, #password').on('input', function() {
+            if (formSubmitted) {
+                const $field = $(this);
+                const $error = $(`#${this.id}-error`);
+                $field.removeClass('input-error');
+                $error.removeClass('show');
+            }
+        });
+
+        $('#login-form').submit(function(e){
+            e.preventDefault();
+            $('#login-form button[type="submit"]').addClass('loading');
+            
+            $.ajax({
+                url:'ajax.php?action=login3',
+                method:'POST',
+                data:$(this).serialize(),
+                error:err=>{
+                    console.log(err)
+                    $('#login-form button[type="submit"]').removeClass('loading');
+                },
+                success:function(resp){
+                    if(resp == 1){
+                        location.href ='index.php?page=home';
+                    } else if(resp == 2){
+                        showError('Username or password is incorrect.');
+                        $('#login-form button[type="submit"]').removeClass('loading');
+                    } else if(resp == 3){
+                        location.href ='change_password.php';
+                    } else if(resp == 4){
+                        showError('Too many failed attempts. Please try again after 15 minutes.');
+                        $('#login-form button[type="submit"]').removeClass('loading');
+                    }
+                }
             });
         });
 
-        function requestAccount() {
-            alert("Please contact the administrator to request an account.");
-        }
+        $('.toggle-password').click(function() {
+            const passwordField = $(this).siblings('input');
+            const type = passwordField.attr('type') === 'password' ? 'text' : 'password';
+            passwordField.attr('type', type);
+            $(this).find('svg').attr('viewBox', type === 'password' ? '0 0 24 24' : '0 0 24 24');
+            $(this).find('path').attr('d', type === 'password' 
+                ? 'M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'
+                : 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z'
+            );
+        });
+    });
+
+    function requestAccount() {
+        alert("Please contact the administrator to request an account.");
+    }
     </script>
 </body>
 </html>

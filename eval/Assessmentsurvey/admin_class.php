@@ -2,6 +2,11 @@
 session_start();
 ini_set('display_errors', 1);
 
+  
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Pdf\Mpdf;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 
 Class Action {
@@ -17,11 +22,13 @@ Class Action {
 	    $this->db->close();
 	    ob_end_flush();
 	}
-
 	function login(){
 		extract($_POST);
 		$type = array("", "users", "faculty_list", "student_list");
 		$type2 = array("", "admin", "faculty", "student");
+		
+		// Get IP address
+		$ip_address = $_SERVER['REMOTE_ADDR'];
 		
 		// Check if the identifier is an email or school ID
 		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
@@ -30,7 +37,23 @@ Class Action {
 			$condition = "school_id = '".$identifier."'";
 		}
 		
-		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM {$type[$login]} WHERE {$condition}");
+		// Check for too many failed attempts
+		$lockout_time = 15;
+		$max_attempts = 3;
+		
+		$check_attempts = $this->db->query("SELECT COUNT(*) as attempt_count FROM login_attempts 
+								   WHERE identifier = '$identifier' AND ip_address = '$ip_address' 
+								   AND attempt_time > DATE_SUB(NOW(), INTERVAL $lockout_time MINUTE)");
+		
+		if($check_attempts && $row = $check_attempts->fetch_assoc()) {
+			if($row['attempt_count'] >= $max_attempts) {
+				return 4; // Account is temporarily locked
+			}
+		}
+		
+		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name 
+								FROM {$type[$login]} WHERE {$condition}");
+		
 		if($qry->num_rows > 0){
 			$row = $qry->fetch_array();
 			$hashed_password = $row['password'];
@@ -44,19 +67,21 @@ Class Action {
 				$password_verified = true;
 				$update_hash = true;
 			}
-	
-			if ($password_verified) {
-				// If MD5 was used, update to newer hashing method
-				if ($update_hash) {
+			
+			if($password_verified) {
+				// Clear login attempts
+				$this->db->query("DELETE FROM login_attempts 
+								WHERE identifier = '$identifier' AND ip_address = '$ip_address'");
+				
+				// Update hash if using old MD5
+				if($update_hash) {
 					$new_hash = password_hash($password, PASSWORD_DEFAULT);
-					$update_query = "UPDATE {$type[$login]} SET password = '{$new_hash}' WHERE id = {$row['id']}";
-					$this->db->query($update_query);
+					$update = $this->db->query("UPDATE {$type[$login]} set password = '$new_hash' where id = ".$row['id']);
 				}
-	
+				
 				// Check if password needs to be changed (for students and faculty)
 				if($login != 1 && $row['is_password_changed'] == 0) {
-					// Store all necessary information in session
-					$_SESSION['login_id'] = $row['id']; // Add this line
+					$_SESSION['login_id'] = $row['id'];
 					$_SESSION['temp_user_id'] = $row['id'];
 					$_SESSION['temp_login_type'] = $login;
 					$_SESSION['temp_name'] = $row['name'];
@@ -65,7 +90,7 @@ Class Action {
 					return 3; // Redirect to password change
 				}
 				
-				// Normal login process for users with changed passwords
+				// Normal login process
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
 						$_SESSION['login_'.$key] = $value;
@@ -83,23 +108,54 @@ Class Action {
 					}
 				}
 				
-				return 1; // Normal login success
+				return 1; // Success
 			}
+			
+			// Record failed attempt
+			$user_type = $type2[$login];
+			$school_id = isset($row['school_id']) ? $row['school_id'] : null;
+			$this->db->query("INSERT INTO login_attempts 
+							(identifier, ip_address, attempt_time, user_type, school_id) 
+							VALUES ('$identifier', '$ip_address', NOW(), '$user_type', " . 
+							($school_id ? "'$school_id'" : "NULL") . ")");
+			
 			return 2; // Wrong password
 		}
+		
+		// Record failed attempt for non-existent user
+		$user_type = $type2[$login];
+		$this->db->query("INSERT INTO login_attempts 
+						(identifier, ip_address, attempt_time, user_type, school_id) 
+						VALUES ('$identifier', '$ip_address', NOW(), '$user_type', NULL)");
+		
 		return 2; // User not found
 	}
 
-
-
 	function login3() {
 		extract($_POST);
+		
+		// Get IP address
+		$ip_address = $_SERVER['REMOTE_ADDR'];
 		
 		// Check if the identifier is an email or school ID
 		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
 			$condition = "email = '".$identifier."'";
 		} else {
 			$condition = "school_id = '".$identifier."'";
+		}
+		
+		// Check for too many failed attempts
+		$lockout_time = 15; // minutes
+		$max_attempts = 3; // maximum attempts allowed
+		
+		$check_attempts = $this->db->query("SELECT COUNT(*) as attempt_count FROM login_attempts 
+								   WHERE identifier = '$identifier' AND ip_address = '$ip_address' 
+								   AND attempt_time > DATE_SUB(NOW(), INTERVAL $lockout_time MINUTE)");
+		
+		if($check_attempts && $row = $check_attempts->fetch_assoc()) {
+			if($row['attempt_count'] >= $max_attempts) {
+				return 4; // Account is temporarily locked
+			}
 		}
 	
 		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM users WHERE {$condition}");
@@ -119,6 +175,10 @@ Class Action {
 			}
 	
 			if ($password_verified) {
+				// Clear login attempts on successful login
+				$this->db->query("DELETE FROM login_attempts 
+								WHERE identifier = '$identifier' AND ip_address = '$ip_address'");
+				
 				// If MD5 was used, update to newer hashing method
 				if ($update_hash) {
 					$new_hash = password_hash($password, PASSWORD_DEFAULT);
@@ -147,9 +207,19 @@ Class Action {
 				}
 	
 				return 1; // Login success
+			} else {
+				// Record failed attempt
+				$this->db->query("INSERT INTO login_attempts 
+								(identifier, ip_address, attempt_time, user_type, school_id) 
+								VALUES ('$identifier', '$ip_address', NOW(), 'superadmin', NULL)");
+				return 2; // Wrong password
 			}
-			return 2; // Wrong password
 		}
+		
+		// Record failed attempt for non-existent user
+		$this->db->query("INSERT INTO login_attempts 
+						(identifier, ip_address, attempt_time, user_type, school_id) 
+						VALUES ('$identifier', '$ip_address', NOW(), 'superadmin', NULL)");
 		return 2; // User not found
 	}
 
@@ -194,8 +264,8 @@ Class Action {
 				}
 				
 				$_SESSION['login_id'] = $row['id'];
-				$_SESSION['login_type'] = 4; // Hardcoded for superadmin
-				$_SESSION['login_view_folder'] = 'staff/'; // Hardcoded admin folder
+				$_SESSION['login_type'] = 4; 
+				$_SESSION['login_view_folder'] = 'staff-cot/'; 
 				$_SESSION['user_id'] = $row['id'];
 	
 				// Set academic data
@@ -217,39 +287,59 @@ Class Action {
 	function login4_cme() {
 		extract($_POST);
 		
-		// Check if the identifier is an email
+		// Check if the identifier is an email or school ID
 		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
 			$condition = "email = '".$identifier."'";
 		} else {
-			return 2; // Only email login is allowed for CME staff
+			$condition = "school_id = '".$identifier."'";
 		}
-		
-		// Query the cme_staff table
-		$qry = $this->db->query("SELECT * FROM cme_staff WHERE {$condition}");
+	
+		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM cme_staff WHERE {$condition}");
 		
 		if($qry->num_rows > 0) {
-			$data = $qry->fetch_array();
+			$row = $qry->fetch_array();
+			$hashed_password = $row['password'];
 			
-			// Verify password
-			if(password_verify($password, $data['password'])) {
-				// Set session variables
-				foreach($data as $key => $value) {
+			$password_verified = false;
+			$update_hash = false;
+	
+			if (password_verify($password, $hashed_password)) {
+				$password_verified = true;
+			} elseif (md5($password) === $hashed_password) {
+				$password_verified = true;
+				$update_hash = true;
+			}
+	
+			if ($password_verified) {
+				// If MD5 was used, update to newer hashing method
+				if ($update_hash) {
+					$new_hash = password_hash($password, PASSWORD_DEFAULT);
+					$update_query = "UPDATE cme_staff SET password = '{$new_hash}' WHERE id = {$row['id']}";
+					$this->db->query($update_query);
+				}
+	
+				// Store user data in session
+				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
 						$_SESSION['login_'.$key] = $value;
 				}
-				$_SESSION['login_id'] = $data['id'];
-				$_SESSION['login_type'] = 'CME';
-				$_SESSION['login_department'] = 'CME';
 				
-				return 'CME';
+				$_SESSION['login_id'] = $row['id'];
+				$_SESSION['login_type'] = 5;
+				$_SESSION['login_view_folder'] = 'staff-cme/';
+				$_SESSION['user_id'] = $row['id'];
+	
+				// Set academic data
+				$academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1");
+				if($academic->num_rows > 0) {
+					foreach($academic->fetch_array() as $k => $v) {
+						if(!is_numeric($k))
+							$_SESSION['academic'][$k] = $v;
+					}
+				}
+	
+				return 1; // Login success
 			}
-			
-			// Log failed attempt
-			$stmt = $this->db->prepare("INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)");
-			$ip = $_SERVER['REMOTE_ADDR'];
-			$stmt->bind_param("ss", $identifier, $ip);
-			$stmt->execute();
-			
 			return 2; // Wrong password
 		}
 		return 2; // User not found
@@ -257,41 +347,66 @@ Class Action {
 
 
 	function login4_coe() {
+		// Verify CSRF token first
+		if (!isset($_POST['csrf_token']) || !$this->verify_csrf_token($_POST['csrf_token'])) {
+			return 'invalid_token';
+		}
+		
 		extract($_POST);
 		
-		// Check if the identifier is an email
+		// Check if the identifier is an email or school ID
 		if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
 			$condition = "email = '".$identifier."'";
 		} else {
-			return 2; // Only email login is allowed for COE staff
+			$condition = "school_id = '".$identifier."'";
 		}
-		
-		// Query the coe_staff table
-		$qry = $this->db->query("SELECT * FROM coe_staff WHERE {$condition}");
+	
+		$qry = $this->db->query("SELECT *, concat(firstname,' ',lastname) as name FROM coe_staff WHERE {$condition}");
 		
 		if($qry->num_rows > 0) {
-			$data = $qry->fetch_array();
+			$row = $qry->fetch_array();
+			$hashed_password = $row['password'];
 			
-			// Verify password
-			if(password_verify($password, $data['password'])) {
-				// Set session variables
-				foreach($data as $key => $value) {
+			$password_verified = false;
+			$update_hash = false;
+	
+			if (password_verify($password, $hashed_password)) {
+				$password_verified = true;
+			} elseif (md5($password) === $hashed_password) {
+				$password_verified = true;
+				$update_hash = true;
+			}
+	
+			if ($password_verified) {
+				// If MD5 was used, update to newer hashing method
+				if ($update_hash) {
+					$new_hash = password_hash($password, PASSWORD_DEFAULT);
+					$update_query = "UPDATE coe_staff SET password = '{$new_hash}' WHERE id = {$row['id']}";
+					$this->db->query($update_query);
+				}
+	
+				// Store user data in session
+				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
 						$_SESSION['login_'.$key] = $value;
 				}
-				$_SESSION['login_id'] = $data['id'];
-				$_SESSION['login_type'] = 'COE';
-				$_SESSION['login_department'] = 'COE';
 				
-				return 'COE';
+				$_SESSION['login_id'] = $row['id'];
+				$_SESSION['login_type'] = 6;  // Changed to 6 for COE staff
+				$_SESSION['login_view_folder'] = 'staff-coe/';  // Changed to staff-coe
+				$_SESSION['user_id'] = $row['id'];
+	
+				// Set academic data
+				$academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1");
+				if($academic->num_rows > 0) {
+					foreach($academic->fetch_array() as $k => $v) {
+						if(!is_numeric($k))
+							$_SESSION['academic'][$k] = $v;
+					}
+				}
+	
+				return 1; // Login success
 			}
-			
-			// Log failed attempt
-			$stmt = $this->db->prepare("INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)");
-			$ip = $_SERVER['REMOTE_ADDR'];
-			$stmt->bind_param("ss", $identifier, $ip);
-			$stmt->execute();
-			
 			return 2; // Wrong password
 		}
 		return 2; // User not found
@@ -397,6 +512,11 @@ function verify_code(){
     return 0; // Verification failed
 }
 function change_password(){
+    // Verify CSRF token first
+    if (!isset($_POST['csrf_token']) || !$this->verify_csrf_token($_POST['csrf_token'])) {
+        return 'invalid_token';
+    }
+    
     extract($_POST);
     $user_id = $_SESSION['temp_user_id'];
     $user_type = $_SESSION['temp_login_type'];
@@ -474,6 +594,11 @@ private function validatePassword($password) {
 
 
    function forgot_password() {
+    // Verify CSRF token first
+    if (!isset($_POST['csrf_token']) || !$this->verify_csrf_token($_POST['csrf_token'])) {
+        return 'invalid_token';
+    }
+    
     extract($_POST);
     $type = array("","users","faculty_list","student_list");
     $table = $type[$login];
@@ -727,11 +852,35 @@ public function forgot_update_password() {
 
 	//superadmin
 	function logout3(){
-		session_destroy();
-		foreach ($_SESSION as $key => $value) {
-			unset($_SESSION[$key]);
+		// Start session if not already started
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
 		}
+		
+		// Clear all session variables
+		$_SESSION = array();
+		
+		// Destroy the session cookie
+		if (isset($_COOKIE[session_name()])) {
+			setcookie(session_name(), '', time()-3600, '/');
+		}
+		
+		// Clear any remember me token if it exists
+		if(isset($_COOKIE['superadmin_remember_token'])) {
+			setcookie('superadmin_remember_token', '', time()-3600, '/');
+		}
+		
+		// Destroy the session
+		session_destroy();
+		
+		// Set cache control headers to prevent caching
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
+		
+		// Redirect to superadminlogin.php instead of login.php
 		header("location:superadminlogin.php");
+		exit();
 	}
      
 
@@ -779,6 +928,69 @@ public function forgot_update_password() {
 
 
 
+	function logout5(){
+		// Start session if not already started
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
+		
+		// Clear all session variables
+		$_SESSION = array();
+		
+		// Destroy the session cookie
+		if (isset($_COOKIE[session_name()])) {
+			setcookie(session_name(), '', time()-3600, '/');
+		}
+		
+		
+		
+		// Destroy the session
+		session_destroy();
+		
+		// Set cache control headers to prevent caching
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
+		
+		// Redirect to stafflogin_cme.php
+		header("location:stafflogin_cme.php");
+		exit();
+	}
+
+
+	function logout6(){
+		// Start session if not already started
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
+		
+		// Clear all session variables
+		$_SESSION = array();
+		
+		// Destroy the session cookie
+		if (isset($_COOKIE[session_name()])) {
+			setcookie(session_name(), '', time()-3600, '/');
+		}
+		
+		
+		
+		// Destroy the session
+		session_destroy();
+		
+		// Set cache control headers to prevent caching
+		header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+		header("Cache-Control: post-check=0, pre-check=0", false);
+		header("Pragma: no-cache");
+		
+		// Redirect to stafflogin_cme.php
+		header("location:stafflogin_coe.php");
+		exit();
+	}
+
+
+
+
+
 
 	function login2(){
 		extract($_POST);
@@ -793,42 +1005,42 @@ public function forgot_update_password() {
 			return 3;
 		}
 	}
-	function save_user(){
-		extract($_POST);
-		$data = "";
-		foreach($_POST as $k => $v){
-			if(!in_array($k, array('id','cpass','password')) && !is_numeric($k)){
-				if(empty($data)){
-					$data .= " $k='$v' ";
-				}else{
-					$data .= ", $k='$v' ";
-				}
-			}
+	function save_user() {
+		// Verify CSRF token first
+		if (!isset($_POST['csrf_token']) || !$this->verify_csrf_token($_POST['csrf_token'])) {
+			return 'invalid_token';
 		}
-		if(!empty($password)){
-					$data .= ", password=md5('$password') ";
-
+		
+		// Prepare base query
+		if(empty($_POST['id'])) {
+			$stmt = $this->db->prepare("INSERT INTO users (email, password, firstname, lastname, avatar) VALUES (?, ?, ?, ?, ?)");
+		} else {
+			$stmt = $this->db->prepare("UPDATE users SET email = ?, password = ?, firstname = ?, lastname = ?, avatar = ? WHERE id = ?");
 		}
-		$check = $this->db->query("SELECT * FROM users where email ='$email' ".(!empty($id) ? " and id != {$id} " : ''))->num_rows;
-		if($check > 0){
-			return 2;
-			exit;
+		
+		// Sanitize inputs
+		$email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+		$firstname = filter_var($_POST['firstname'], FILTER_SANITIZE_STRING);
+		$lastname = filter_var($_POST['lastname'], FILTER_SANITIZE_STRING);
+		
+		// Hash password if provided
+		$password = !empty($_POST['password']) ? password_hash($_POST['password'], PASSWORD_DEFAULT) : '';
+		
+		// Handle file upload
+		$avatar = 'no-image-available.png';
+		if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != '') {
+			$avatar = $this->handle_file_upload($_FILES['img']);
 		}
-		if(isset($_FILES['img']) && $_FILES['img']['tmp_name'] != ''){
-			$fname = strtotime(date('y-m-d H:i')).'_'.$_FILES['img']['name'];
-			$move = move_uploaded_file($_FILES['img']['tmp_name'],'assets/uploads/'. $fname);
-			$data .= ", avatar = '$fname' ";
-
+		
+		// Bind parameters and execute
+		if(empty($_POST['id'])) {
+			$stmt->bind_param("sssss", $email, $password, $firstname, $lastname, $avatar);
+		} else {
+			$id = filter_var($_POST['id'], FILTER_SANITIZE_NUMBER_INT);
+			$stmt->bind_param("sssssi", $email, $password, $firstname, $lastname, $avatar, $id);
 		}
-		if(empty($id)){
-			$save = $this->db->query("INSERT INTO users set $data");
-		}else{
-			$save = $this->db->query("UPDATE users set $data where id = $id");
-		}
-
-		if($save){
-			return 1;
-		}
+		
+		return $stmt->execute() ? 1 : 0;
 	}
 	function signup(){
 		extract($_POST);
@@ -2146,6 +2358,10 @@ function save_evaluation() {
 		
 		
 		
+		
+		
+		
+		
 
 		// Modified check_low_ratings function
 		function check_low_ratings($evaluation_data = null) {
@@ -2881,7 +3097,7 @@ function save_evaluation() {
 				$stmt->execute();
 				$result = $stmt->get_result();
 				
-				if ($result->num_rows > 0) {
+				if ($result->num_rows >0) {
 					return json_encode(['status' => 'exists', 
 									  'message' => 'Assignment already exists for this semester']);
 				}
@@ -4209,7 +4425,6 @@ public function get_dashboard_stats_cme() {
 
 
 
-
 		
           
 
@@ -5192,29 +5407,10 @@ function login4_ceas() {
 
 
 // Add logout functions for each department
-function logout4_ceas() {
-    session_destroy();
-    foreach ($_SESSION as $key => $value) {
-        unset($_SESSION[$key]);
-    }
-    header("location:stafflogin_ceas.php");
-}
 
-function logout4_coe() {
-    session_destroy();
-    foreach ($_SESSION as $key => $value) {
-        unset($_SESSION[$key]);
-    }
-    header("location:stafflogin_coe.php");
-}
 
-function logout4_cme() {
-    session_destroy();
-    foreach ($_SESSION as $key => $value) {
-        unset($_SESSION[$key]);
-    }
-    header("location:stafflogin_cme.php");
-}
+
+
  
 }
 
@@ -5321,8 +5517,7 @@ public function get_completed_evaluations() {
 		]);
 	}
 } 
- 
- private function get_semester_text($semester) {
+  private function get_semester_text($semester) {
 	switch($semester) {
 		case 1:
 			return '1st Semester';
@@ -5943,8 +6138,970 @@ function get_evaluation_status_coe() {
     }
 }
 
+function export_semester_ratings() {
+    try {
+        // Get current academic year
+        $academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
+        if (!$academic) {
+            throw new Exception("No default academic year set");
+        }
+
+        // First, get all criteria and questions that have been used in evaluations this semester
+        $criteria_query = "SELECT DISTINCT c.id, c.criteria, c.order_by 
+                          FROM criteria_list c
+                          INNER JOIN question_list q ON q.criteria_id = c.id 
+                          INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                          INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                          WHERE e.academic_id = ? AND c.criteria != ''
+                          ORDER BY c.order_by";
+        
+        $stmt = $this->db->prepare($criteria_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $criteria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get questions organized by criteria, but only those used this semester
+        $all_questions = [];
+        foreach ($criteria as $c) {
+            $question_query = "SELECT DISTINCT
+                q.id as question_id,
+                q.question,
+                q.order_by
+                FROM question_list q
+                INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                WHERE q.criteria_id = ? AND e.academic_id = ?
+                ORDER BY q.order_by";
+            
+            $stmt = $this->db->prepare($question_query);
+            $stmt->bind_param("ii", $c['id'], $academic['id']);
+            $stmt->execute();
+            $questions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $all_questions = array_merge($all_questions, $questions);
+        }
+
+        // Get all evaluation results with department and schedule type
+        $eval_query = "SELECT e.*, s.school_id, s.firstname, s.lastname, 
+                             f.firstname as faculty_fname, f.lastname as faculty_lname,
+                             sub.code as subject_code, sub.subject as subject_name,
+                             c.curriculum, c.level, c.section, c.department, c.schedule_type,
+                             a.year as academic_year, a.semester
+                      FROM evaluation_list e
+                      INNER JOIN student_list s ON e.student_id = s.id
+                      INNER JOIN faculty_list f ON e.faculty_id = f.id
+                      INNER JOIN subject_list sub ON e.subject_id = sub.id
+                      INNER JOIN class_list c ON e.class_id = c.id
+                      INNER JOIN academic_list a ON e.academic_id = a.id
+                      WHERE e.academic_id = ?
+                      ORDER BY c.department, c.curriculum, c.level, c.section, s.lastname, s.firstname";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Set headers for Excel download
+        header('Content-Type: text/csv; charset=utf-8');
+        $filename = sprintf('evaluation_report_%s_sem%d.csv', 
+            $academic['year'], 
+            $academic['semester']
+        );
+        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        
+        // Add BOM for Excel to recognize UTF-8
+        echo "\xEF\xBB\xBF";
+
+        // Output headers
+        $headers = [
+            'Academic Year',
+            'Semester',
+            'Department',
+            'Student ID',
+            'Student Name',
+            'Faculty',
+            'Subject',
+            'Class',
+            'Date Evaluated'
+        ];
+
+        // Add question headers
+        foreach ($all_questions as $q) {
+            $headers[] = $q['question'];
+        }
+        $headers[] = 'Comments';
+
+        // Create output file handle
+        $output = fopen('php://output', 'w');
+        
+        // Write headers
+        fputcsv($output, $headers);
+
+        // Get all answers and organize them by evaluation_id
+        if (!empty($evaluations)) {
+            $answer_query = "SELECT evaluation_id, question_id, rate 
+                            FROM evaluation_answers 
+                            WHERE evaluation_id IN (" . implode(',', array_column($evaluations, 'evaluation_id')) . ")";
+            $answers = $this->db->query($answer_query)->fetch_all(MYSQLI_ASSOC);
+            
+            $answer_map = [];
+            foreach ($answers as $ans) {
+                $answer_map[$ans['evaluation_id']][$ans['question_id']] = $ans['rate'];
+            }
+
+            // Output data rows
+            foreach ($evaluations as $eval) {
+                // Convert semester number to text
+                $semester_text = match((int)$eval['semester']) {
+                    1 => '1st Semester',
+                    2 => '2nd Semester',
+                    3 => 'Summer',
+                    default => 'Unknown'
+                };
+
+                // Format class name with section and schedule type
+                $class_name = $eval['curriculum'] . ' ' . $eval['level'] . $eval['section'];
+                if (!empty($eval['schedule_type'])) {
+                    $class_name .= '-' . $eval['schedule_type'];
+                }
+
+                $row = [
+                    $eval['academic_year'],
+                    $semester_text,
+                    $eval['department'],
+                    $eval['school_id'],
+                    "{$eval['lastname']}, {$eval['firstname']}",
+                    "{$eval['faculty_lname']}, {$eval['faculty_fname']}",
+                    "({$eval['subject_code']}) {$eval['subject_name']}",
+                    $class_name,
+                    date('Y-m-d H:i:s', strtotime($eval['date_taken']))
+                ];
+
+                // Add answers in order of questions
+                foreach ($all_questions as $q) {
+                    $row[] = $answer_map[$eval['evaluation_id']][$q['question_id']] ?? '';
+                }
+
+                // Add comment at the end
+                $row[] = $eval['comment'] ?? '';
+
+                // Write the row
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error exporting ratings: " . $e->getMessage());
+        echo "Error exporting data: " . $e->getMessage();
+    }
+}
 
 
+function export_semester_ratings_cot() {
+    try {
+        // Get current academic year
+        $academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
+        if (!$academic) {
+            throw new Exception("No default academic year set");
+        }
+
+        // First, get all criteria and questions that have been used in evaluations this semester for COT
+        $criteria_query = "SELECT DISTINCT c.id, c.criteria, c.order_by 
+                          FROM criteria_list c
+                          INNER JOIN question_list q ON q.criteria_id = c.id 
+                          INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                          INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                          INNER JOIN class_list cl ON e.class_id = cl.id
+                          WHERE e.academic_id = ? AND c.criteria != ''
+                          AND cl.department = 'COT'
+                          ORDER BY c.order_by";
+        
+        $stmt = $this->db->prepare($criteria_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $criteria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get questions organized by criteria, but only those used this semester in COT
+        $all_questions = [];
+        foreach ($criteria as $c) {
+            $question_query = "SELECT DISTINCT
+                q.id as question_id,
+                q.question,
+                q.order_by
+                FROM question_list q
+                INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                INNER JOIN class_list cl ON e.class_id = cl.id
+                WHERE q.criteria_id = ? AND e.academic_id = ?
+                AND cl.department = 'COT'
+                ORDER BY q.order_by";
+            
+            $stmt = $this->db->prepare($question_query);
+            $stmt->bind_param("ii", $c['id'], $academic['id']);
+            $stmt->execute();
+            $questions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $all_questions = array_merge($all_questions, $questions);
+        }
+
+        // Get all evaluation results with department and schedule type - filtered for COT
+        $eval_query = "SELECT e.*, s.school_id, s.firstname, s.lastname, 
+                             f.firstname as faculty_fname, f.lastname as faculty_lname,
+                             sub.code as subject_code, sub.subject as subject_name,
+                             c.curriculum, c.level, c.section, c.department, c.schedule_type,
+                             a.year as academic_year, a.semester
+                      FROM evaluation_list e
+                      INNER JOIN student_list s ON e.student_id = s.id
+                      INNER JOIN faculty_list f ON e.faculty_id = f.id
+                      INNER JOIN subject_list sub ON e.subject_id = sub.id
+                      INNER JOIN class_list c ON e.class_id = c.id
+                      INNER JOIN academic_list a ON e.academic_id = a.id
+                      WHERE e.academic_id = ? AND c.department = 'COT'
+                      ORDER BY c.curriculum, c.level, c.section, s.lastname, s.firstname";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Set headers for Excel download
+        header('Content-Type: text/csv; charset=utf-8');
+        $filename = sprintf('COT_evaluation_report_%s_sem%d.csv', 
+            $academic['year'], 
+            $academic['semester']
+        );
+        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        
+        // Rest of the code remains the same...
+        echo "\xEF\xBB\xBF";
+
+        $headers = [
+            'Academic Year',
+            'Semester',
+            'Department',
+            'Student ID',
+            'Student Name',
+            'Faculty',
+            'Subject',
+            'Class',
+            'Date Evaluated'
+        ];
+
+        foreach ($all_questions as $q) {
+            $headers[] = $q['question'];
+        }
+        $headers[] = 'Comments';
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+
+        if (!empty($evaluations)) {
+            $answer_query = "SELECT evaluation_id, question_id, rate 
+                            FROM evaluation_answers 
+                            WHERE evaluation_id IN (" . implode(',', array_column($evaluations, 'evaluation_id')) . ")";
+            $answers = $this->db->query($answer_query)->fetch_all(MYSQLI_ASSOC);
+            
+            $answer_map = [];
+            foreach ($answers as $ans) {
+                $answer_map[$ans['evaluation_id']][$ans['question_id']] = $ans['rate'];
+            }
+
+            foreach ($evaluations as $eval) {
+                $semester_text = match((int)$eval['semester']) {
+                    1 => '1st Semester',
+                    2 => '2nd Semester',
+                    3 => 'Summer',
+                    default => 'Unknown'
+                };
+
+                $class_name = $eval['curriculum'] . ' ' . $eval['level'] . $eval['section'];
+                if (!empty($eval['schedule_type'])) {
+                    $class_name .= '-' . $eval['schedule_type'];
+                }
+
+                $row = [
+                    $eval['academic_year'],
+                    $semester_text,
+                    $eval['department'],
+                    $eval['school_id'],
+                    "{$eval['lastname']}, {$eval['firstname']}",
+                    "{$eval['faculty_lname']}, {$eval['faculty_fname']}",
+                    "({$eval['subject_code']}) {$eval['subject_name']}",
+                    $class_name,
+                    date('Y-m-d H:i:s', strtotime($eval['date_taken']))
+                ];
+
+                foreach ($all_questions as $q) {
+                    $row[] = $answer_map[$eval['evaluation_id']][$q['question_id']] ?? '';
+                }
+
+                $row[] = $eval['comment'] ?? '';
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error exporting ratings: " . $e->getMessage());
+        echo "Error exporting data: " . $e->getMessage();
+    }
+}
+
+function export_semester_ratings_coe() {
+    try {
+        // Get current academic year
+        $academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
+        if (!$academic) {
+            throw new Exception("No default academic year set");
+        }
+
+        // First, get all criteria and questions that have been used in evaluations this semester for COE
+        $criteria_query = "SELECT DISTINCT c.id, c.criteria, c.order_by 
+                          FROM criteria_list c
+                          INNER JOIN question_list q ON q.criteria_id = c.id 
+                          INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                          INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                          INNER JOIN class_list cl ON e.class_id = cl.id
+                          WHERE e.academic_id = ? AND c.criteria != ''
+                          AND cl.department = 'COE'
+                          ORDER BY c.order_by";
+        
+        $stmt = $this->db->prepare($criteria_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $criteria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get questions organized by criteria, but only those used this semester in COE
+        $all_questions = [];
+        foreach ($criteria as $c) {
+            $question_query = "SELECT DISTINCT
+                q.id as question_id,
+                q.question,
+                q.order_by
+                FROM question_list q
+                INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                INNER JOIN class_list cl ON e.class_id = cl.id
+                WHERE q.criteria_id = ? AND e.academic_id = ?
+                AND cl.department = 'COE'
+                ORDER BY q.order_by";
+            
+            $stmt = $this->db->prepare($question_query);
+            $stmt->bind_param("ii", $c['id'], $academic['id']);
+            $stmt->execute();
+            $questions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $all_questions = array_merge($all_questions, $questions);
+        }
+
+        // Get all evaluation results with department and schedule type - filtered for COE
+        $eval_query = "SELECT e.*, s.school_id, s.firstname, s.lastname, 
+                             f.firstname as faculty_fname, f.lastname as faculty_lname,
+                             sub.code as subject_code, sub.subject as subject_name,
+                             c.curriculum, c.level, c.section, c.department, c.schedule_type,
+                             a.year as academic_year, a.semester
+                      FROM evaluation_list e
+                      INNER JOIN student_list s ON e.student_id = s.id
+                      INNER JOIN faculty_list f ON e.faculty_id = f.id
+                      INNER JOIN subject_list sub ON e.subject_id = sub.id
+                      INNER JOIN class_list c ON e.class_id = c.id
+                      INNER JOIN academic_list a ON e.academic_id = a.id
+                      WHERE e.academic_id = ? AND c.department = 'COE'
+                      ORDER BY c.curriculum, c.level, c.section, s.lastname, s.firstname";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Set headers for Excel download
+        header('Content-Type: text/csv; charset=utf-8');
+        $filename = sprintf('COE_evaluation_report_%s_sem%d.csv', 
+            $academic['year'], 
+            $academic['semester']
+        );
+        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        
+        // Rest of the code remains the same...
+        echo "\xEF\xBB\xBF";
+
+        $headers = [
+            'Academic Year',
+            'Semester',
+            'Department',
+            'Student ID',
+            'Student Name',
+            'Faculty',
+            'Subject',
+            'Class',
+            'Date Evaluated'
+        ];
+
+        foreach ($all_questions as $q) {
+            $headers[] = $q['question'];
+        }
+        $headers[] = 'Comments';
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+
+        if (!empty($evaluations)) {
+            $answer_query = "SELECT evaluation_id, question_id, rate 
+                            FROM evaluation_answers 
+                            WHERE evaluation_id IN (" . implode(',', array_column($evaluations, 'evaluation_id')) . ")";
+            $answers = $this->db->query($answer_query)->fetch_all(MYSQLI_ASSOC);
+            
+            $answer_map = [];
+            foreach ($answers as $ans) {
+                $answer_map[$ans['evaluation_id']][$ans['question_id']] = $ans['rate'];
+            }
+
+            foreach ($evaluations as $eval) {
+                $semester_text = match((int)$eval['semester']) {
+                    1 => '1st Semester',
+                    2 => '2nd Semester',
+                    3 => 'Summer',
+                    default => 'Unknown'
+                };
+
+                $class_name = $eval['curriculum'] . ' ' . $eval['level'] . $eval['section'];
+                if (!empty($eval['schedule_type'])) {
+                    $class_name .= '-' . $eval['schedule_type'];
+                }
+
+                $row = [
+                    $eval['academic_year'],
+                    $semester_text,
+                    $eval['department'],
+                    $eval['school_id'],
+                    "{$eval['lastname']}, {$eval['firstname']}",
+                    "{$eval['faculty_lname']}, {$eval['faculty_fname']}",
+                    "({$eval['subject_code']}) {$eval['subject_name']}",
+                    $class_name,
+                    date('Y-m-d H:i:s', strtotime($eval['date_taken']))
+                ];
+
+                foreach ($all_questions as $q) {
+                    $row[] = $answer_map[$eval['evaluation_id']][$q['question_id']] ?? '';
+                }
+
+                $row[] = $eval['comment'] ?? '';
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error exporting ratings: " . $e->getMessage());
+        echo "Error exporting data: " . $e->getMessage();
+    }
+}
+
+function export_semester_ratings_cme() {
+    try {
+        // Get current academic year
+        $academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
+        if (!$academic) {
+            throw new Exception("No default academic year set");
+        }
+
+        // First, get all criteria and questions that have been used in evaluations this semester for CME
+        $criteria_query = "SELECT DISTINCT c.id, c.criteria, c.order_by 
+                          FROM criteria_list c
+                          INNER JOIN question_list q ON q.criteria_id = c.id 
+                          INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                          INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                          INNER JOIN class_list cl ON e.class_id = cl.id
+                          WHERE e.academic_id = ? AND c.criteria != ''
+                          AND cl.department = 'CME'
+                          ORDER BY c.order_by";
+        
+        $stmt = $this->db->prepare($criteria_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $criteria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get questions organized by criteria, but only those used this semester in CME
+        $all_questions = [];
+        foreach ($criteria as $c) {
+            $question_query = "SELECT DISTINCT
+                q.id as question_id,
+                q.question,
+                q.order_by
+                FROM question_list q
+                INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                INNER JOIN class_list cl ON e.class_id = cl.id
+                WHERE q.criteria_id = ? AND e.academic_id = ?
+                AND cl.department = 'CME'
+                ORDER BY q.order_by";
+            
+            $stmt = $this->db->prepare($question_query);
+            $stmt->bind_param("ii", $c['id'], $academic['id']);
+            $stmt->execute();
+            $questions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $all_questions = array_merge($all_questions, $questions);
+        }
+
+        // Get all evaluation results with department and schedule type - filtered for CME
+        $eval_query = "SELECT e.*, s.school_id, s.firstname, s.lastname, 
+                             f.firstname as faculty_fname, f.lastname as faculty_lname,
+                             sub.code as subject_code, sub.subject as subject_name,
+                             c.curriculum, c.level, c.section, c.department, c.schedule_type,
+                             a.year as academic_year, a.semester
+                      FROM evaluation_list e
+                      INNER JOIN student_list s ON e.student_id = s.id
+                      INNER JOIN faculty_list f ON e.faculty_id = f.id
+                      INNER JOIN subject_list sub ON e.subject_id = sub.id
+                      INNER JOIN class_list c ON e.class_id = c.id
+                      INNER JOIN academic_list a ON e.academic_id = a.id
+                      WHERE e.academic_id = ? AND c.department = 'CME'
+                      ORDER BY c.curriculum, c.level, c.section, s.lastname, s.firstname";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Set headers for Excel download
+        header('Content-Type: text/csv; charset=utf-8');
+        $filename = sprintf('CME_evaluation_report_%s_sem%d.csv', 
+            $academic['year'], 
+            $academic['semester']
+        );
+        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        
+        // Add BOM for Excel to recognize UTF-8
+        echo "\xEF\xBB\xBF";
+
+        $headers = [
+            'Academic Year',
+            'Semester',
+            'Department',
+            'Student ID',
+            'Student Name',
+            'Faculty',
+            'Subject',
+            'Class',
+            'Date Evaluated'
+        ];
+
+        foreach ($all_questions as $q) {
+            $headers[] = $q['question'];
+        }
+        $headers[] = 'Comments';
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+
+        if (!empty($evaluations)) {
+            $answer_query = "SELECT evaluation_id, question_id, rate 
+                            FROM evaluation_answers 
+                            WHERE evaluation_id IN (" . implode(',', array_column($evaluations, 'evaluation_id')) . ")";
+            $answers = $this->db->query($answer_query)->fetch_all(MYSQLI_ASSOC);
+            
+            $answer_map = [];
+            foreach ($answers as $ans) {
+                $answer_map[$ans['evaluation_id']][$ans['question_id']] = $ans['rate'];
+            }
+
+            foreach ($evaluations as $eval) {
+                $semester_text = match((int)$eval['semester']) {
+                    1 => '1st Semester',
+                    2 => '2nd Semester',
+                    3 => 'Summer',
+                    default => 'Unknown'
+                };
+
+                $class_name = $eval['curriculum'] . ' ' . $eval['level'] . $eval['section'];
+                if (!empty($eval['schedule_type'])) {
+                    $class_name .= '-' . $eval['schedule_type'];
+                }
+
+                $row = [
+                    $eval['academic_year'],
+                    $semester_text,
+                    $eval['department'],
+                    $eval['school_id'],
+                    "{$eval['lastname']}, {$eval['firstname']}",
+                    "{$eval['faculty_lname']}, {$eval['faculty_fname']}",
+                    "({$eval['subject_code']}) {$eval['subject_name']}",
+                    $class_name,
+                    date('Y-m-d H:i:s', strtotime($eval['date_taken']))
+                ];
+
+                foreach ($all_questions as $q) {
+                    $row[] = $answer_map[$eval['evaluation_id']][$q['question_id']] ?? '';
+                }
+
+                $row[] = $eval['comment'] ?? '';
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error exporting ratings: " . $e->getMessage());
+        echo "Error exporting data: " . $e->getMessage();
+    }
+}
+
+
+
+function export_semester_ratings_ceas() {
+    try {
+        // Get current academic year
+        $academic = $this->db->query("SELECT * FROM academic_list WHERE is_default = 1")->fetch_assoc();
+        if (!$academic) {
+            throw new Exception("No default academic year set");
+        }
+
+        // First, get all criteria and questions that have been used in evaluations this semester for CEAS
+        $criteria_query = "SELECT DISTINCT c.id, c.criteria, c.order_by 
+                          FROM criteria_list c
+                          INNER JOIN question_list q ON q.criteria_id = c.id 
+                          INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                          INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                          INNER JOIN class_list cl ON e.class_id = cl.id
+                          WHERE e.academic_id = ? AND c.criteria != ''
+                          AND cl.department = 'CEAS'
+                          ORDER BY c.order_by";
+        
+        $stmt = $this->db->prepare($criteria_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $criteria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Get questions organized by criteria, but only those used this semester in CEAS
+        $all_questions = [];
+        foreach ($criteria as $c) {
+            $question_query = "SELECT DISTINCT
+                q.id as question_id,
+                q.question,
+                q.order_by
+                FROM question_list q
+                INNER JOIN evaluation_answers ea ON ea.question_id = q.id
+                INNER JOIN evaluation_list e ON e.evaluation_id = ea.evaluation_id
+                INNER JOIN class_list cl ON e.class_id = cl.id
+                WHERE q.criteria_id = ? AND e.academic_id = ?
+                AND cl.department = 'CEAS'
+                ORDER BY q.order_by";
+            
+            $stmt = $this->db->prepare($question_query);
+            $stmt->bind_param("ii", $c['id'], $academic['id']);
+            $stmt->execute();
+            $questions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $all_questions = array_merge($all_questions, $questions);
+        }
+
+        // Get all evaluation results with department and schedule type - filtered for CEAS
+        $eval_query = "SELECT e.*, s.school_id, s.firstname, s.lastname, 
+                             f.firstname as faculty_fname, f.lastname as faculty_lname,
+                             sub.code as subject_code, sub.subject as subject_name,
+                             c.curriculum, c.level, c.section, c.department, c.schedule_type,
+                             a.year as academic_year, a.semester
+                      FROM evaluation_list e
+                      INNER JOIN student_list s ON e.student_id = s.id
+                      INNER JOIN faculty_list f ON e.faculty_id = f.id
+                      INNER JOIN subject_list sub ON e.subject_id = sub.id
+                      INNER JOIN class_list c ON e.class_id = c.id
+                      INNER JOIN academic_list a ON e.academic_id = a.id
+                      WHERE e.academic_id = ? AND c.department = 'CEAS'
+                      ORDER BY c.curriculum, c.level, c.section, s.lastname, s.firstname";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param("i", $academic['id']);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Set headers for Excel download
+        header('Content-Type: text/csv; charset=utf-8');
+        $filename = sprintf('CEAS_evaluation_report_%s_sem%d.csv', 
+            $academic['year'], 
+            $academic['semester']
+        );
+        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        
+        // Rest of the code remains the same...
+        echo "\xEF\xBB\xBF";
+
+        $headers = [
+            'Academic Year',
+            'Semester',
+            'Department',
+            'Student ID',
+            'Student Name',
+            'Faculty',
+            'Subject',
+            'Class',
+            'Date Evaluated'
+        ];
+
+        foreach ($all_questions as $q) {
+            $headers[] = $q['question'];
+        }
+        $headers[] = 'Comments';
+
+        $output = fopen('php://output', 'w');
+        fputcsv($output, $headers);
+
+        if (!empty($evaluations)) {
+            $answer_query = "SELECT evaluation_id, question_id, rate 
+                            FROM evaluation_answers 
+                            WHERE evaluation_id IN (" . implode(',', array_column($evaluations, 'evaluation_id')) . ")";
+            $answers = $this->db->query($answer_query)->fetch_all(MYSQLI_ASSOC);
+            
+            $answer_map = [];
+            foreach ($answers as $ans) {
+                $answer_map[$ans['evaluation_id']][$ans['question_id']] = $ans['rate'];
+            }
+
+            foreach ($evaluations as $eval) {
+                $semester_text = match((int)$eval['semester']) {
+                    1 => '1st Semester',
+                    2 => '2nd Semester',
+                    3 => 'Summer',
+                    default => 'Unknown'
+                };
+
+                $class_name = $eval['curriculum'] . ' ' . $eval['level'] . $eval['section'];
+                if (!empty($eval['schedule_type'])) {
+                    $class_name .= '-' . $eval['schedule_type'];
+                }
+
+                $row = [
+                    $eval['academic_year'],
+                    $semester_text,
+                    $eval['department'],
+                    $eval['school_id'],
+                    "{$eval['lastname']}, {$eval['firstname']}",
+                    "{$eval['faculty_lname']}, {$eval['faculty_fname']}",
+                    "({$eval['subject_code']}) {$eval['subject_name']}",
+                    $class_name,
+                    date('Y-m-d H:i:s', strtotime($eval['date_taken']))
+                ];
+
+                foreach ($all_questions as $q) {
+                    $row[] = $answer_map[$eval['evaluation_id']][$q['question_id']] ?? '';
+                }
+
+                $row[] = $eval['comment'] ?? '';
+                fputcsv($output, $row);
+            }
+        }
+
+        fclose($output);
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Error exporting ratings: " . $e->getMessage());
+        echo "Error exporting data: " . $e->getMessage();
+    }
+}
+
+
+
+
+
+
+
+
+//december 8,2024
+
+function export_evaluation_summary() {
+    try {
+        // Validate input
+        if (!isset($_POST['faculty_id']) || !isset($_POST['academic_id'])) {
+            throw new Exception('Missing required parameters');
+        }
+
+		require __DIR__ . '/../vendor/autoload.php';
+      
+        $faculty_id = intval($_POST['faculty_id']);
+        $academic_id = intval($_POST['academic_id']);
+
+        // Get faculty details
+        $faculty_query = "SELECT CONCAT(lastname, ', ', firstname) as name 
+                         FROM faculty_list WHERE id = ?";
+        $stmt = $this->db->prepare($faculty_query);
+        $stmt->bind_param('i', $faculty_id);
+        $stmt->execute();
+        $faculty = $stmt->get_result()->fetch_assoc();
+
+        // Get academic year details
+        $academic_query = "SELECT year, semester FROM academic_list WHERE id = ?";
+        $stmt = $this->db->prepare($academic_query);
+        $stmt->bind_param('i', $academic_id);
+        $stmt->execute();
+        $academic = $stmt->get_result()->fetch_assoc();
+
+        // Create new Spreadsheet
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Set document properties
+        $spreadsheet->getProperties()
+            ->setCreator('Faculty Evaluation System')
+            ->setLastModifiedBy('System Administrator')
+            ->setTitle('Evaluation Summary')
+            ->setSubject('Faculty Evaluation Summary')
+            ->setDescription('Evaluation Summary Report');
+
+        // Add header
+        $sheet->setCellValue('A1', 'FACULTY EVALUATION SUMMARY');
+        $sheet->setCellValue('A2', 'Faculty: ' . $faculty['name']);
+        $sheet->setCellValue('A3', 'Academic Year: ' . $academic['year']);
+        $sheet->setCellValue('A4', 'Semester: ' . $academic['semester']);
+
+        // Style header
+        $sheet->getStyle('A1:A4')->getFont()->setBold(true);
+        $sheet->getStyle('A1')->getFont()->setSize(14);
+
+        // Get evaluation data
+        $eval_query = "SELECT 
+            e.*, 
+            q.question,
+            c.criteria,
+            ROUND(AVG(a.rate), 2) as average_rating
+            FROM evaluation_list e 
+            JOIN evaluation_answers a ON e.evaluation_id = a.evaluation_id
+            JOIN question_list q ON a.question_id = q.id
+            JOIN criteria_list c ON q.criteria_id = c.id
+            WHERE e.faculty_id = ? AND e.academic_id = ?
+            GROUP BY q.id
+            ORDER BY c.order_by, q.order_by";
+        
+        $stmt = $this->db->prepare($eval_query);
+        $stmt->bind_param('ii', $faculty_id, $academic_id);
+        $stmt->execute();
+        $evaluations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // Add data headers
+        $sheet->setCellValue('A6', 'Criteria');
+        $sheet->setCellValue('B6', 'Question');
+        $sheet->setCellValue('C6', 'Average Rating');
+
+        // Style headers
+        $headerStyle = $sheet->getStyle('A6:C6');
+        $headerStyle->getFont()->setBold(true);
+        $headerStyle->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+        $headerStyle->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+        $headerStyle->getFill()->getStartColor()->setRGB('CCCCCC');
+
+        // Add data
+        $row = 7;
+        foreach ($evaluations as $eval) {
+            $sheet->setCellValue('A' . $row, $eval['criteria']);
+            $sheet->setCellValue('B' . $row, $eval['question']);
+            $sheet->setCellValue('C' . $row, $eval['average_rating']);
+            
+            // Style data rows
+            $sheet->getStyle('A'.$row.':C'.$row)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $row++;
+        }
+
+        // Auto-size columns
+        foreach(range('A','C') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Create PDF Writer
+        $writer = new Mpdf($spreadsheet);
+        
+        // Clean output buffers
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Set headers
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="evaluation_summary_'.date('Y-m-d').'.pdf"');
+        header('Cache-Control: max-age=0');
+
+        // Save to output
+        $writer->save('php://output');
+        exit();
+
+    } catch (Exception $e) {
+        error_log("PDF Generation Error: " . $e->getMessage());
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        exit();
+    }
+}
+
+
+//December 12, 2024 || security
+
+private function handle_file_upload($file) {
+    // Whitelist allowed file types
+    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+    $filename = $file['name'];
+    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+    
+    if (!in_array($ext, $allowed)) {
+        throw new Exception('Invalid file type');
+    }
+    
+    // Generate secure filename
+    $new_filename = bin2hex(random_bytes(16)) . '.' . $ext;
+    $upload_path = 'assets/uploads/' . $new_filename;
+    
+    // Verify it's a real image
+    if (!getimagesize($file['tmp_name'])) {
+        throw new Exception('Invalid image file');
+    }
+    
+    if (move_uploaded_file($file['tmp_name'], $upload_path)) {
+        return $new_filename;
+    }
+    
+    throw new Exception('File upload failed');
+}
+
+private function sanitize_input($data, $type = 'string') {
+    switch($type) {
+        case 'email':
+            return filter_var($data, FILTER_SANITIZE_EMAIL);
+        case 'int':
+            return filter_var($data, FILTER_SANITIZE_NUMBER_INT);
+        case 'float':
+            return filter_var($data, FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+        case 'url':
+            return filter_var($data, FILTER_SANITIZE_URL);
+        default:
+            return htmlspecialchars(strip_tags($data), ENT_QUOTES, 'UTF-8');
+    }
+}
+
+private function validate_token() {
+    if (!isset($_SESSION['csrf_token']) || 
+        !isset($_POST['csrf_token']) || 
+        $_SESSION['csrf_token'] !== $_POST['csrf_token']) {
+        throw new Exception('Invalid CSRF token');
+    }
+}
+
+
+private function generate_csrf_token() {
+	if (!isset($_SESSION['csrf_token'])) {
+		$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+	}
+	return $_SESSION['csrf_token'];
+}
+
+private function verify_csrf_token($token) {
+	if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
+		return false;
+	}
+	return true;
+}
 
 
 

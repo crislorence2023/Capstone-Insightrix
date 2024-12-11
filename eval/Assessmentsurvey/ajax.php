@@ -16,6 +16,8 @@ if($action == 'login'){
         echo 2; // Login failed
     } elseif($login == 3) {
         echo 3; // Password change required
+    } elseif($login == 4) {
+        echo 4; // Account temporarily locked
     }
 }
 if($action == 'login2'){
@@ -57,8 +59,13 @@ if($action == 'login4_cme'){
         echo $login;
 }
 
-if($action == 'logout4_cme'){
-    $logout = $crud->logout4_cme();
+if($action == 'logout5'){
+    $logout = $crud->logout5();
+    if($logout)
+        echo $logout;
+}
+if($action == 'logout6'){
+    $logout = $crud->logout6();
     if($logout)
         echo $logout;
 }
@@ -745,7 +752,40 @@ if($action == 'save_staff_ceas'){
 }
 
 
-//get assignments
+
+//get ratings
+
+if($action == 'export_semester_ratings'){
+    $crud->export_semester_ratings();
+}
+
+if($action == 'export_semester_ratings_cot'){
+    $crud->export_semester_ratings_cot();
+}
+if($action == 'export_semester_ratings_coe'){
+    $crud->export_semester_ratings_coe();
+}
+if($action == 'export_semester_ratings_cme'){
+    $crud->export_semester_ratings_cme();
+}
+if($action == 'export_semester_ratings_ceas'){
+    $crud->export_semester_ratings_ceas();
+}
+
+
+//December 8,2024
+
+if($action == 'export_evaluation_summary'){
+    $crud->export_evaluation_summary();
+}
+
+
+
+
+
+
+//December 9,2024
+
 
 
 
