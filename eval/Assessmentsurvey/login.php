@@ -537,7 +537,7 @@ input-group1 {
                 </div>
             </div>
 
-            <a href="forgot-password.php" class="forgot-password">Forgot Password?</a>
+            <!-- <a href="forgot-password.php" class="forgot-password">Forgot Password?</a> -->
             
             <div class="input-group1">
                 <div class="dropdown">
