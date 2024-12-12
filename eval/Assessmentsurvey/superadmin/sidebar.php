@@ -14,17 +14,17 @@
             <ul class="nav nav-pills nav-sidebar flex-column nav-flat" data-widget="treeview" role="menu" data-accordion="false">
 
 
-            <p style=" color: #333333; margin-left: 1rem; margin-top: .5rem; font-weight: 500;">General</p>
+            <p style=" color: #333333; margin-left: 1rem; margin-top: .5rem; font-weight: 500; margin-bottom: 1rem;">General</p>
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=home" class="nav-link nav-home">
+                    <a href="./" class="nav-link nav-home">
                         <i class="ri-home-line"></i>
                         <p>Dashboard</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=evaluation-status" class="nav-link nav-evaluation-status">
+                    <a href="./index.php?page=evaluation-status" class="nav-link nav-evaluation-status">
                         <i class="ri-clipboard-line"></i>
                         <p>Evaluation Status</p>
                     </a>
@@ -32,7 +32,7 @@
 
                  <!-- Reports -->
                  <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=report" class="nav-link nav-report">
+                    <a href="./index.php?page=report" class="nav-link nav-report">
                         <i class="ri-bar-chart-2-line"></i>
                         <p>Evaluation Report</p>
                     </a>
@@ -40,11 +40,11 @@
 
 
 
-                <p style="color:  color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500;">Academic Section</p>
+                <p style="color:  color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500; margin-bottom: 1rem;">Academic Section</p>
 
                 <!-- Academic Year -->
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=academic_list" class="nav-link nav-academic_list">
+                    <a href="./index.php?page=academic_list" class="nav-link nav-academic_list">
                         <i class="ri-calendar-line"></i>
                         <p>Academic Year</p>
                     </a>
@@ -52,14 +52,14 @@
 
                 <!-- Department -->
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=department" class="nav-link nav-department">
+                    <a href="./index.php?page=department" class="nav-link nav-department">
                         <i class="ri-briefcase-line"></i>
                         <p>Department</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=subject_list" class="nav-link nav-subject_list">
+                    <a href="./index.php?page=subject_list" class="nav-link nav-subject_list">
                         <i class="ri-book-line"></i>
                         <p>Subjects</p>
                     </a>
@@ -67,7 +67,7 @@
 
                   
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=class_list" class="nav-link nav-class_list">
+                    <a href="./index.php?page=class_list" class="nav-link nav-class_list">
                         <i class="ri-group-line"></i>
                         <p>Classes</p>
                     </a>
@@ -76,7 +76,7 @@
 
                 <!-- Department -->
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=Room" class="nav-link nav-sidebar_room">
+                    <a href="./index.php?page=Room" class="nav-link nav-sidebar_room">
                         <i class="ri-layout-line"></i>
                         <p>Room</p>
                     </a>
@@ -84,12 +84,12 @@
                
 
 
-            <p style="color:  color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500;">Create And Assign</p>
+            <p style="color:  color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500; margin-bottom: 1rem;">Create And Assign</p>
                 
              
                 
             <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=AssignClassSubjects" class="nav-link nav-assign_faculty">
+                    <a href="./index.php?page=AssignClassSubjects" class="nav-link nav-academic_list">
                         <i class="ri-calendar-line"></i>
                         <p>Assign Faculty</p>
                     </a>
@@ -107,13 +107,13 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=new_faculty" class="nav-link nav-new_faculty tree-item">
+                            <a href="./index.php?page=new_faculty" class="nav-link nav-new_faculty tree-item">
                                 <i class="ri-add-line"></i>
                                 <p>Add New</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=faculty_list" class="nav-link nav-faculty_list tree-item">
+                            <a href="./index.php?page=faculty_list" class="nav-link nav-faculty_list tree-item">
                                 <i class="ri-list-unordered"></i>
                                 <p>List</p>
                             </a>
@@ -136,13 +136,13 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=new_student" class="nav-link nav-new_student tree-item">
+                            <a href="./index.php?page=new_student" class="nav-link nav-new_student tree-item">
                                 <i class="ri-add-line"></i>
                                 <p>Add New</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=student_list" class="nav-link nav-student_list tree-item">
+                            <a href="./index.php?page=student_list" class="nav-link nav-student_list tree-item">
                                 <i class="ri-list-unordered"></i>
                                 <p>List</p>
                             </a>
@@ -156,13 +156,13 @@
                    
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=AssignClassSubjects" class="nav-link nav-new_faculty tree-item">
+                            <a href="./index.php?page=AssignClassSubjects" class="nav-link nav-new_faculty tree-item">
                                 <i class="ri-add-line"></i>
                                 <p>Assign</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=Classroom" class="nav-link nav-faculty_list tree-item">
+                            <a href="./index.php?page=Classroom" class="nav-link nav-faculty_list tree-item">
                                 <i class="ri-list-unordered"></i>
                                 <p>Classroom</p>
                             </a>
@@ -184,9 +184,8 @@
                         </p>
                     </a>
                     <ul class="nav nav-treeview">
-                       
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=staff_list" class="nav-link nav-staff_list tree-item">
+                            <a href="./index.php?page=staff_list" class="nav-link nav-staff_list tree-item">
                                 <i class="ri-building-line"></i>
                                 <p>cot List</p>
                             </a>
@@ -194,21 +193,19 @@
                         
 
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=cme_staff" class="nav-link nav-staff_list_cme tree-item">
+                            <a href="./index.php?page=cme_staff" class="nav-link nav-staff_list tree-item">
                                 <i class="ri-building-2-line"></i>
                                 <p>cme list</p>
                             </a>
                         </li>
-
-                       
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=ceas_staff" class="nav-link nav-staff_list_ceas tree-item">
+                            <a href="./index.php?page=ceas_staff" class="nav-link nav-staff_list tree-item">
                                 <i class="ri-building-4-line"></i>
                                 <p>ceas list</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=coe_staff" class="nav-link nav-staff_list_coe tree-item">
+                            <a href="./index.php?page=coe_staff" class="nav-link nav-staff_list tree-item">
                                 <i class="ri-building-3-line"></i>
                                 <p>coe list</p>
                             </a>
@@ -233,13 +230,13 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=questionnaire" class="nav-link nav-questionnaire tree-item">
+                            <a href="./index.php?page=questionnaire" class="nav-link nav-questionnaire tree-item">
                                 <i class="ri-file-text-line"></i>
                                 <p>Questionnaires</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=view_surveys" class="nav-link nav-view_surveys tree-item">
+                            <a href="./index.php?page=view_surveys" class="nav-link nav-view_surveys tree-item">
                                 <i class="ri-database-line"></i>
                                 <p>View Surveys Data</p>
                             </a>
@@ -250,28 +247,28 @@
 
                
 
-                <p style=" color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500;">Others</p>
+                <p style=" color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500; margin-bottom: 1rem;">Others</p>
 
 
 
                 
 
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=LiveClassroom" class="nav-link nav-live_classroom_view">
+                    <a href="./index.php?page=LiveClassroom" class="nav-link nav-live_classroom_view">
                         <i class="ri-add-box-line"></i>
                         <p>Create Classroom</p>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <a href="./indexsuperadmin.php?page=Classroom" class="nav-link nav-classroom_view">
+                    <a href="./index.php?page=Classroom" class="nav-link nav-classroom_view">
                         <i class="ri-tv-line"></i>
                         <p>View Classroom</p>
                     </a>
                 </li>
 
 
-                <p style=" color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500;">Accounts</p>
+                <p style=" color: #333333; margin-left: 1rem; margin-top: 1rem; font-weight: 500; margin-bottom: 1rem;">Accounts</p>
                  <!-- Users -->
                  <li class="nav-item">
                     <a href="#" class="nav-link nav-edit_user">
@@ -283,13 +280,13 @@
                     </a>
                     <ul class="nav nav-treeview">
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=new_user" class="nav-link nav-new_user tree-item">
+                            <a href="./index.php?page=new_user" class="nav-link nav-new_user tree-item">
                                 <i class="ri-user-add-line"></i>
                                 <p>Add New</p>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="./indexsuperadmin.php?page=user_list" class="nav-link nav-user_list tree-item">
+                            <a href="./index.php?page=user_list" class="nav-link nav-user_list tree-item">
                                 <i class="ri-list-unordered"></i>
                                 <p>List</p>
                             </a>
@@ -308,7 +305,7 @@
     --sidebar-bg: #FFFFFF;
     --text-color: #191919;
     --border-color: #e2e8f0;
-    --hover-transition: 0.3s ease;
+    
 }
 
 .main-sidebar {
@@ -403,15 +400,14 @@ b, strong {
     border: 1px solid #b8c6d1 !important;
     color: teal !important;
     border-radius: 8px;
-    height: 3.3rem;
+    height: 3.28rem;
     box-shadow: none !important;
     padding: 0.75rem 1rem;
-
 }
 
 .nav-sidebar .nav-link:hover:not(.menu-open > .nav-link) i {
     color: teal !important;
-   
+    font-size: 1.5rem;
     transform: none;
 }
 
@@ -419,13 +415,12 @@ b, strong {
 .nav-sidebar .nav-link.active:not(.menu-open > .nav-link),
 .nav-sidebar .nav-link.nav-classroom_view.active,
 .nav-sidebar .nav-link.nav-live_classroom_view.active,
-.nav-sidebar .nav-link.nav-sidebar_room.active,
-.nav-sidebar .nav-link.nav-staff_list.active {
+.nav-sidebar .nav-link.nav-sidebar_room.active {
     background: #f9f9f9 !important;
     border: 1px solid #b8c6d1 !important;
     color: teal !important;
     border-radius: 8px;
-    height: 3.3rem;
+    height: 3.2rem;
     box-shadow: none !important;
     padding: 0.75rem 1rem;
     margin-bottom: 0.3rem;
@@ -434,9 +429,9 @@ b, strong {
 .nav-sidebar .nav-link.active:not(.menu-open > .nav-link) i,
 .nav-sidebar .nav-link.nav-classroom_view.active i,
 .nav-sidebar .nav-link.nav-live_classroom_view.active i,
-.nav-sidebar .nav-link.nav-sidebar_room.active i,
-.nav-sidebar .nav-link.nav-staff_list.active i {
+.nav-sidebar .nav-link.nav-sidebar_room.active i {
     color: teal !important;
+    font-size: 1.5rem;
     transform: none;
 }
 
@@ -569,12 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const pageMapping = {
         'Classroom': 'classroom_view',
         'LiveClassroom': 'live_classroom_view',
-        'Room': 'sidebar_room',
-        'AssignClassSubjects': 'assign_faculty',
-        'cme_staff': 'staff_list_cme',
-        'ceas_staff': 'staff_list_ceas',
-        'coe_staff': 'staff_list_coe',
-        'staff_list': 'staff_list'
+        'Room': 'sidebar_room'
     };
     
     // Get the correct identifier based on the mapping or use the original page
@@ -598,25 +588,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Special handling for staff pages
-        if (['cme_staff', 'ceas_staff', 'coe_staff', 'staff_list'].includes(page)) {
-            const staffParentLink = document.querySelector('.nav-link.nav-edit_staff');
-            const staffTreeItem = document.querySelector(`.nav-link.nav-staff_list_${page.split('_')[0]}`);
-            
-            if (staffParentLink) {
-                staffParentLink.classList.add('active');
-                staffParentLink.closest('.nav-item').classList.add('menu-open');
-            }
-            
-            if (staffTreeItem) {
-                staffTreeItem.classList.add('active');
-            }
-        }
-        
         // Handle menu items with tree view
         if (currentLink.classList.contains('nav-is-tree')) {
             currentLink.parentElement.classList.add('menu-open');
         }
+
+        // Scroll the active link into view with smooth behavior
+        setTimeout(() => {
+            currentLink.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }, 100);
     }
     
     // Hamburger menu functionality
