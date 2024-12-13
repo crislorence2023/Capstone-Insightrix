@@ -309,7 +309,7 @@
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
                 <span class="dropdown-item-text"><?php echo $_SESSION['login_name'] ?></span>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item disabled" href="javascript:void(0)" id="manage_account">
+                <a class="dropdown-item" href="javascript:void(0)" id="manage_account">
                     <i class="fa-solid fa-gear"></i> Manage Account
                 </a>
                 <a class="dropdown-item" href="ajax.php?action=logout">
