@@ -24,6 +24,11 @@ Class Action {
 	}
 	function login(){
 		extract($_POST);
+		
+		// Escape user input
+		$identifier = $this->escape_template($identifier);
+		$password = $this->escape_template($password);
+		
 		$type = array("", "users", "faculty_list", "student_list");
 		$type2 = array("", "admin", "faculty", "student");
 		
@@ -93,7 +98,7 @@ Class Action {
 				// Normal login process
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 				}
 				$_SESSION['login_id'] = $row['id'];
 				$_SESSION['login_type'] = $login;
@@ -189,7 +194,7 @@ Class Action {
 				// Store user data in session
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 				}
 				
 				$_SESSION['login_id'] = $row['id'];
@@ -260,7 +265,7 @@ Class Action {
 				// Store user data in session
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 				}
 				
 				$_SESSION['login_id'] = $row['id'];
@@ -321,7 +326,7 @@ Class Action {
 				// Store user data in session
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 				}
 				
 				$_SESSION['login_id'] = $row['id'];
@@ -388,7 +393,7 @@ Class Action {
 				// Store user data in session
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key))
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 				}
 				
 				$_SESSION['login_id'] = $row['id'];
@@ -425,7 +430,7 @@ Class Action {
 				// Log the user in automatically
 				foreach ($row as $key => $value) {
 					if($key != 'password' && !is_numeric($key)) {
-						$_SESSION['login_'.$key] = $value;
+						$_SESSION['login_'.$key] = $this->escape_template($value);
 					}
 				}
 				$_SESSION['login_id'] = $row['id'];
@@ -575,6 +580,8 @@ private function validatePassword($password) {
     }
 
     
+
+
 
 
 
@@ -5390,7 +5397,7 @@ function login4_ceas() {
             // Store user data in session
             foreach ($row as $key => $value) {
                 if($key != 'password' && !is_numeric($key))
-                    $_SESSION['login_'.$key] = $value;
+                    $_SESSION['login_'.$key] = $this->escape_template($value);
             }
             $_SESSION['login_id'] = $row['id'];
             $_SESSION['login_type'] = 4; // Staff type
@@ -7101,6 +7108,21 @@ private function verify_csrf_token($token) {
 		return false;
 	}
 	return true;
+}
+
+
+private function secure_session_start() {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_secure', 1);
+    ini_set('session.use_only_cookies', 1);
+    session_start();
+}
+
+private function escape_template($string) {
+    // Remove potential Twig/template syntax
+    $string = preg_replace('/{[{%].*?[%}]}/', '', $string);
+    // Escape special characters
+    return htmlspecialchars($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
 

@@ -8,6 +8,13 @@
     }
     ob_end_flush();
     if(isset($_SESSION['login_id'])) header("location:index.php?page=home");
+
+    function escape_template($string) {
+        // Remove potential Twig/template syntax
+        $string = preg_replace('/{[{%].*?[%}]}/', '', $string);
+        // Escape special characters
+        return htmlspecialchars($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
     ?>
 
 
@@ -516,7 +523,7 @@ input-group1 {
                 $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             }
             ?>
-            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo escape_template($_SESSION['csrf_token']); ?>">
             
             <div class="input-group">
                 <div class="email-container">
@@ -537,7 +544,7 @@ input-group1 {
                 </div>
             </div>
 
-            <a href="javascript:void(0)" class="forgot-password" style="pointer-events: none; color: #cccccc;">Forgot Password?</a>
+            <a href="forgot-password.php" class="forgot-password">Forgot Password?</a>
             
             <div class="input-group1">
                 <div class="dropdown">
